@@ -21,7 +21,10 @@ public class DashboardFrame extends JFrame {
     private void initComponents() {
         tabbedPane = new JTabbedPane();
 
+        // 2D Designer
         roomDesignerPanel = new RoomDesignerPanel(designManager);
+
+        // 3D Renderer
         roomRenderer3D = new RoomRenderer3D(designManager);
 
         tabbedPane.addTab("2D Room Designer", roomDesignerPanel);

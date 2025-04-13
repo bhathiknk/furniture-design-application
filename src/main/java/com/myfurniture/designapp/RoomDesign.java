@@ -20,27 +20,35 @@ public class RoomDesign {
     public int getRoomWidth() {
         return roomWidth;
     }
+
     public void setRoomWidth(int roomWidth) {
         this.roomWidth = roomWidth;
     }
+
     public int getRoomHeight() {
         return roomHeight;
     }
+
     public void setRoomHeight(int roomHeight) {
         this.roomHeight = roomHeight;
     }
+
     public Color getRoomColor() {
         return roomColor;
     }
+
     public void setRoomColor(Color roomColor) {
         this.roomColor = roomColor;
     }
+
     public List<FurnitureItem> getFurniture() {
         return furniture;
     }
+
     public void addFurniture(FurnitureItem item) {
         furniture.add(item);
     }
+
     public void removeFurniture(FurnitureItem item) {
         furniture.remove(item);
     }

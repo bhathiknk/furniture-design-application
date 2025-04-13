@@ -10,7 +10,8 @@ public class FurnitureItem {
     private Color secondaryColor;
     private String material; // "wood", "fabric", "leather", etc.
 
-    public FurnitureItem(String type, int x, int y, int width, int height, Color primaryColor, Color secondaryColor, String material) {
+    public FurnitureItem(String type, int x, int y, int width, int height,
+                         Color primaryColor, Color secondaryColor, String material) {
         this.type = type;
         this.x = x;
         this.y = y;
