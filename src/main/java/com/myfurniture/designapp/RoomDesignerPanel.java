@@ -46,6 +46,39 @@ public class RoomDesignerPanel extends JPanel {
             canvas.repaint();
         });
 
+        JButton btnAddBed = new JButton("Add Bed");
+        btnAddBed.addActionListener(e -> {
+            FurnitureItem bed = FurnitureFactory.createFurniture("Bed");
+            bed.setX(currentRoomDesign.getRoomWidth() / 2 - 50);
+            bed.setY(currentRoomDesign.getRoomHeight() / 2);
+            currentRoomDesign.addFurniture(bed);
+            canvas.repaint();
+        });
+
+        JButton btnAddSofa = new JButton("Add Sofa");
+        btnAddSofa.addActionListener(e -> {
+            FurnitureItem sofa = FurnitureFactory.createFurniture("Sofa");
+            sofa.setX(currentRoomDesign.getRoomWidth() / 2 - 60);
+            sofa.setY(currentRoomDesign.getRoomHeight() / 2);
+            currentRoomDesign.addFurniture(sofa);
+            canvas.repaint();
+        });
+
+        JButton btnAddBookshelf = new JButton("Add Bookshelf");
+        btnAddBookshelf.addActionListener(e -> {
+            FurnitureItem shelf = FurnitureFactory.createFurniture("Bookshelf");
+            shelf.setX(currentRoomDesign.getRoomWidth() / 2 - 30);
+            shelf.setY(currentRoomDesign.getRoomHeight() / 2);
+            currentRoomDesign.addFurniture(shelf);
+            canvas.repaint();
+        });
+
+        palettePanel.add(Box.createVerticalStrut(10));
+        palettePanel.add(btnAddBed);
+        palettePanel.add(btnAddSofa);
+        palettePanel.add(btnAddBookshelf);
+
+
         palettePanel.add(btnAddChair);
         palettePanel.add(Box.createVerticalStrut(10));
         palettePanel.add(btnAddTable);
