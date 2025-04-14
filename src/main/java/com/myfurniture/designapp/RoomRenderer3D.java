@@ -41,24 +41,27 @@ public class RoomRenderer3D extends StackPane {
         camera = new PerspectiveCamera(true);
         camera.setNearClip(1);
         camera.setFarClip(5000);
-        camera.getTransforms().add(new Translate(0, 0, -800)); // Move back for a full view
+        camera.getTransforms().addAll(
+                new Translate(0, 0, -1000) // pull camera back
+        );
         subScene.setCamera(camera);
 
         getChildren().add(subScene);
-        addMouseControl(); // Optional: for rotating the view
+        addMouseControl();
     }
 
     private void buildScene() {
         root3D.getChildren().clear();
         RoomDesign room = designManager.getCurrentDesign();
+
         if (room != null) {
             Group contentGroup = new Group();
 
-            // Create booth-style room (includes 3 walls and the floor)
+            // Create booth-style room (walls and floor)
             Group boothWalls = BoothRoomFactory.createBooth(room);
             contentGroup.getChildren().add(boothWalls);
 
-            // Add furniture
+            // Add all furniture
             for (FurnitureItem item : room.getFurniture()) {
                 contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
             }
@@ -70,16 +73,23 @@ public class RoomRenderer3D extends StackPane {
             double scaleZ = displayDepth / roomDepth;
             double uniformScale = Math.min(scaleX, scaleZ);
 
-            // Flip vertically (upside down)
-            contentGroup.getTransforms().addAll(
-                    new Scale(uniformScale, -uniformScale, uniformScale), // flip Y-axis
-                    new Translate(-roomWidth * uniformScale / 2.0, 75, -roomDepth * uniformScale / 2.0)
-            );
+            // Apply uniform scale with Y-axis flipped
+            contentGroup.getTransforms().add(new Scale(uniformScale, -uniformScale, uniformScale));
+
+            // Center the room based on width and depth
+            double offsetX = -roomWidth / 2.0;
+            double offsetZ = -roomDepth / 2.0;
+
+            // Adjust Y to keep it visually centered after flipping
+            double offsetY = 100; // Raise the scene upward after flip
+
+            contentGroup.getTransforms().add(new Translate(offsetX, offsetY, offsetZ));
 
             root3D.getChildren().add(contentGroup);
         }
 
-        AmbientLight ambient = new AmbientLight(Color.WHITE);
+        // Add ambient light
+        AmbientLight ambient = new AmbientLight(Color.color(1, 1, 1));
         root3D.getChildren().add(ambient);
     }
 
@@ -90,6 +100,7 @@ public class RoomRenderer3D extends StackPane {
             anchorAngleX = rotateX.getAngle();
             anchorAngleY = rotateY.getAngle();
         });
+
         this.setOnMouseDragged((MouseEvent e) -> {
             rotateX.setAngle(anchorAngleX - (e.getSceneY() - anchorY) * 0.5);
             rotateY.setAngle(anchorAngleY + (e.getSceneX() - anchorX) * 0.5);

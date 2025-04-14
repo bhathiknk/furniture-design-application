@@ -23,8 +23,14 @@ public class Furniture3DFactory {
             case "bed": return createBed(item, group);
             case "sofa": return createSofa(item, group);
             case "bookshelf": return createBookshelf(item, group);
+            case "wardrobe": return createWardrobe(item, group);
+            case "dining table": return createDiningTable(item, group);
+            case "lamp": return createLamp(item, group);
+            case "tv stand": return createTVStand(item, group);
+            case "coffee table": return createCoffeeTable(item, group);
             default: return group;
         }
+
     }
 
     private static PhongMaterial woodMaterial() {
@@ -213,4 +219,74 @@ public class Furniture3DFactory {
 
         return group;
     }
+
+    private static Group createWardrobe(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), h = item.getHeight(), d = 25;
+        PhongMaterial mat = woodMaterial();
+        Box body = new Box(w, h, d);
+        body.setMaterial(mat);
+        body.getTransforms().add(new Translate(x + w / 2, h / 2, y + d / 2));
+        group.getChildren().add(body);
+        return group;
+    }
+
+    private static Group createDiningTable(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double topH = 6, legH = 50;
+        PhongMaterial topMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial legMat = woodMaterial();
+        Box top = new Box(w, topH, d);
+        top.setMaterial(topMat);
+        top.getTransforms().add(new Translate(x + w / 2, legH + topH / 2, y + d / 2));
+        group.getChildren().add(top);
+        for (double[] pos : new double[][]{{4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4}}) {
+            Cylinder leg = new Cylinder(3, legH);
+            leg.setMaterial(legMat);
+            leg.getTransforms().add(new Translate(x + pos[0], legH / 2, y + pos[1]));
+            group.getChildren().add(leg);
+        }
+        return group;
+    }
+
+    private static Group createLamp(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), h = item.getHeight();
+        PhongMaterial baseMat = smoothMaterial(item.getSecondaryColor());
+        PhongMaterial headMat = smoothMaterial(item.getPrimaryColor());
+        Cylinder stand = new Cylinder(2, h - 20);
+        stand.setMaterial(baseMat);
+        stand.getTransforms().add(new Translate(x + w / 2, (h - 20) / 2, y + w / 2));
+        Box head = new Box(w + 10, 10, w + 10);
+        head.setMaterial(headMat);
+        head.getTransforms().add(new Translate(x + w / 2, h - 5, y + w / 2));
+        group.getChildren().addAll(stand, head);
+        return group;
+    }
+
+    private static Group createTVStand(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight(), h = 30;
+        PhongMaterial mat = woodMaterial();
+        Box body = new Box(w, h, d);
+        body.setMaterial(mat);
+        body.getTransforms().add(new Translate(x + w / 2, h / 2, y + d / 2));
+        group.getChildren().add(body);
+        return group;
+    }
+
+    private static Group createCoffeeTable(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight(), h = 25;
+        PhongMaterial topMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial legMat = woodMaterial();
+        Box top = new Box(w, 4, d);
+        top.setMaterial(topMat);
+        top.getTransforms().add(new Translate(x + w / 2, h, y + d / 2));
+        group.getChildren().add(top);
+        for (double[] pos : new double[][]{{4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4}}) {
+            Cylinder leg = new Cylinder(2.5, h);
+            leg.setMaterial(legMat);
+            leg.getTransforms().add(new Translate(x + pos[0], h / 2, y + pos[1]));
+            group.getChildren().add(leg);
+        }
+        return group;
+    }
+
 }

@@ -2,15 +2,9 @@ package com.myfurniture.designapp;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.geometry.Insets;
 
@@ -52,9 +46,7 @@ public class RoomDesigner2D extends BorderPane {
             if (newColor != null) {
                 currentRoomDesign.setRoomColor(newColor);
                 canvas.draw();
-                if (update3DCallback != null) {
-                    update3DCallback.run();
-                }
+                if (update3DCallback != null) update3DCallback.run();
             }
         });
 
@@ -65,18 +57,14 @@ public class RoomDesigner2D extends BorderPane {
         btnPrimaryColor = new Button("Select Primary Color");
         btnPrimaryColor.setOnAction(e -> {
             Color newColor = ColorPickerDialog.showDialog(chosenPrimary);
-            if (newColor != null) {
-                chosenPrimary = newColor;
-            }
+            if (newColor != null) chosenPrimary = newColor;
         });
 
         Label lblSecondary = new Label("Furniture Secondary Color:");
         btnSecondaryColor = new Button("Select Secondary Color");
         btnSecondaryColor.setOnAction(e -> {
             Color newColor = ColorPickerDialog.showDialog(chosenSecondary);
-            if (newColor != null) {
-                chosenSecondary = newColor;
-            }
+            if (newColor != null) chosenSecondary = newColor;
         });
 
         Label lblAddFurniture = new Label("Add Furniture:");
@@ -91,11 +79,25 @@ public class RoomDesigner2D extends BorderPane {
         Button btnAddBookshelf = new Button("Bookshelf");
         btnAddBookshelf.setOnAction(e -> addFurniture("Bookshelf"));
 
+        // New furniture buttons
+        Button btnAddWardrobe = new Button("Wardrobe");
+        btnAddWardrobe.setOnAction(e -> addFurniture("Wardrobe"));
+        Button btnAddDining = new Button("Dining Table");
+        btnAddDining.setOnAction(e -> addFurniture("Dining Table"));
+        Button btnAddLamp = new Button("Lamp");
+        btnAddLamp.setOnAction(e -> addFurniture("Lamp"));
+        Button btnAddTV = new Button("TV Stand");
+        btnAddTV.setOnAction(e -> addFurniture("TV Stand"));
+        Button btnAddCoffee = new Button("Coffee Table");
+        btnAddCoffee.setOnAction(e -> addFurniture("Coffee Table"));
+
         palettePanel.getChildren().addAll(
                 lblRoomWidth, txtRoomWidth, lblRoomHeight, txtRoomHeight,
                 btnRoomColor, btnApplyRoomSettings,
                 lblPrimary, btnPrimaryColor, lblSecondary, btnSecondaryColor,
-                lblAddFurniture, new HBox(10, btnAddChair, btnAddTable, btnAddBed, btnAddSofa, btnAddBookshelf)
+                lblAddFurniture,
+                new HBox(10, btnAddChair, btnAddTable, btnAddBed, btnAddSofa, btnAddBookshelf),
+                new HBox(10, btnAddWardrobe, btnAddDining, btnAddLamp, btnAddTV, btnAddCoffee)
         );
 
         canvas = new DesignerCanvas(currentRoomDesign);
@@ -112,9 +114,7 @@ public class RoomDesigner2D extends BorderPane {
             canvas.setWidth(w);
             canvas.setHeight(h);
             canvas.draw();
-            if (update3DCallback != null) {
-                update3DCallback.run();
-            }
+            if (update3DCallback != null) update3DCallback.run();
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Please enter valid integers for width and height.");
             alert.showAndWait();
@@ -130,9 +130,7 @@ public class RoomDesigner2D extends BorderPane {
             item.setY(currentRoomDesign.getRoomHeight() / 2 - item.getHeight() / 2);
             currentRoomDesign.addFurniture(item);
             canvas.draw();
-            if (update3DCallback != null) {
-                update3DCallback.run();
-            }
+            if (update3DCallback != null) update3DCallback.run();
         }
     }
 
@@ -173,21 +171,16 @@ public class RoomDesigner2D extends BorderPane {
                 selectedItem.setX((int) newX);
                 selectedItem.setY((int) newY);
                 draw();
-                if (update3DCallback != null) {
-                    update3DCallback.run();
-                }
+                if (update3DCallback != null) update3DCallback.run();
             }
         }
 
         public void draw() {
             GraphicsContext gc = getGraphicsContext2D();
-            // Fill background with the selected room color.
             gc.setFill(roomDesign.getRoomColor());
             gc.fillRect(0, 0, getWidth(), getHeight());
-            // Draw room boundary.
             gc.setStroke(Color.BLACK);
             gc.strokeRect(0, 0, roomDesign.getRoomWidth(), roomDesign.getRoomHeight());
-            // Draw each furniture item.
             for (FurnitureItem item : roomDesign.getFurniture()) {
                 drawFurniture(gc, item);
             }
@@ -202,6 +195,8 @@ public class RoomDesigner2D extends BorderPane {
                     gc.fillRect(item.getX(), item.getY() - item.getHeight() / 2, item.getWidth(), item.getHeight() / 2);
                     break;
                 case "table":
+                case "dining table":
+                case "coffee table":
                     gc.fillRect(item.getX(), item.getY(), item.getWidth(), item.getHeight());
                     gc.setFill(item.getSecondaryColor());
                     double legSize = 10;
@@ -221,16 +216,34 @@ public class RoomDesigner2D extends BorderPane {
                     gc.fillRect(item.getX() + 5, item.getY() - 10, item.getWidth() - 10, 10);
                     break;
                 case "bookshelf":
+                case "wardrobe":
                     gc.fillRect(item.getX(), item.getY(), item.getWidth(), item.getHeight());
                     gc.setStroke(item.getSecondaryColor());
-                    for (int i = 1; i < 4; i++) {
-                        double shelfY = item.getY() + i * item.getHeight() / 4.0;
-                        gc.strokeLine(item.getX(), shelfY, item.getX() + item.getWidth(), shelfY);
+                    if (item.getType().equalsIgnoreCase("bookshelf")) {
+                        for (int i = 1; i < 4; i++) {
+                            double shelfY = item.getY() + i * item.getHeight() / 4.0;
+                            gc.strokeLine(item.getX(), shelfY, item.getX() + item.getWidth(), shelfY);
+                        }
+                    } else {
+                        gc.strokeLine(item.getX() + item.getWidth() / 2, item.getY(),
+                                item.getX() + item.getWidth() / 2, item.getY() + item.getHeight());
                     }
+                    break;
+                case "lamp":
+                    gc.fillOval(item.getX(), item.getY(), item.getWidth(), item.getHeight() / 2);
+                    gc.setFill(item.getSecondaryColor());
+                    gc.fillRect(item.getX() + item.getWidth() / 2 - 2, item.getY() + item.getHeight() / 2,
+                            4, item.getHeight() / 2);
+                    break;
+                case "tv stand":
+                    gc.fillRect(item.getX(), item.getY(), item.getWidth(), item.getHeight());
+                    gc.setFill(item.getSecondaryColor());
+                    gc.fillRect(item.getX() + item.getWidth() / 3, item.getY() - 10, item.getWidth() / 3, 10);
                     break;
                 default:
                     gc.fillRect(item.getX(), item.getY(), item.getWidth(), item.getHeight());
             }
+
             gc.setStroke(Color.DARKGRAY);
             gc.strokeRect(item.getX(), item.getY(), item.getWidth(), item.getHeight());
         }
