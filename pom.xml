@@ -34,5 +34,12 @@
             <version>20</version>
         </dependency>
         <!-- Add other modules as necessary (e.g., javafx-base, javafx-media, etc.) -->
+
+        <!-- https://mvnrepository.com/artifact/org.fxyz3d/fxyz3d -->
+        <dependency>
+            <groupId>org.fxyz3d</groupId>
+            <artifactId>fxyz3d</artifactId>
+            <version>0.6.0</version>
+        </dependency>
     </dependencies>
 </project>

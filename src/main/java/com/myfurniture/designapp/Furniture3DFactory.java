@@ -1,207 +1,213 @@
 package com.myfurniture.designapp;
 
 import javafx.scene.Group;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
+import javafx.scene.PointLight;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.Cylinder;
 import javafx.scene.transform.Translate;
 
 public class Furniture3DFactory {
 
     public static Group createFurniture3D(FurnitureItem item) {
+        Group group = new Group();
+        group.getChildren().add(new PointLight(Color.WHITE));
+
         switch (item.getType().toLowerCase()) {
-            case "chair":
-                return createChair(item);
-            case "table":
-                return createTable(item);
-            case "bed":
-                return createBed(item);
-            case "sofa":
-                return createSofa(item);
-            case "bookshelf":
-                return createBookshelf(item);
-            default:
-                return new Group(); // Unknown type
+            case "chair": return createChair(item, group);
+            case "table": return createTable(item, group);
+            case "bed": return createBed(item, group);
+            case "sofa": return createSofa(item, group);
+            case "bookshelf": return createBookshelf(item, group);
+            default: return group;
         }
     }
 
-    private static Group createChair(FurnitureItem item) {
-        Group group = new Group();
-        double x = item.getX();
-        double y = item.getY();
-        double w = item.getWidth();
-        double d = item.getHeight();
-        double seatHeight = 15;
-        double legHeight = 30;
-        double backHeight = 50;
+    private static PhongMaterial woodMaterial() {
+        Canvas canvas = new Canvas(64, 64);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.setFill(Color.BURLYWOOD);
+        gc.fillRect(0, 0, 64, 64);
+        gc.setStroke(Color.SADDLEBROWN);
+        for (int i = 0; i < 64; i += 8)
+            gc.strokeLine(i, 0, i, 64);
+        WritableImage img = canvas.snapshot(null, null);
 
-        PhongMaterial seatMaterial = new PhongMaterial(item.getPrimaryColor());
-        PhongMaterial legMaterial = new PhongMaterial(Color.DARKGRAY);
-        PhongMaterial backMaterial = new PhongMaterial(item.getSecondaryColor());
+        PhongMaterial mat = new PhongMaterial();
+        mat.setDiffuseMap(img);
+        mat.setSpecularColor(Color.LIGHTGRAY);
+        mat.setSpecularPower(64);
+        return mat;
+    }
 
-        // Seat
-        Box seat = new Box(w, seatHeight, d);
-        seat.setMaterial(seatMaterial);
-        seat.getTransforms().add(new Translate(x + w / 2.0, legHeight + seatHeight / 2.0, y + d / 2.0));
+    private static PhongMaterial smoothMaterial(Color color) {
+        PhongMaterial mat = new PhongMaterial(color);
+        mat.setSpecularColor(Color.WHITE);
+        mat.setSpecularPower(128);
+        return mat;
+    }
+
+    private static Group createChair(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double legH = 40, seatH = 6, backH = 30;
+
+        PhongMaterial seatMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial legMat = woodMaterial();
+        PhongMaterial backMat = smoothMaterial(item.getSecondaryColor());
+
+        // Seat box
+        Box seat = new Box(w - 6, seatH, d - 6);
+        seat.setMaterial(seatMat);
+        seat.getTransforms().add(new Translate(x + w / 2, legH + seatH / 2, y + d / 2));
         group.getChildren().add(seat);
 
-        // Backrest
-        Box back = new Box(w, backHeight, 5);
-        back.setMaterial(backMaterial);
-        back.getTransforms().add(new Translate(x + w / 2.0, legHeight + seatHeight + backHeight / 2.0, y + 2.5));
-        group.getChildren().add(back);
-
-        // Legs (4 corners)
-        double legSize = 5;
-        double[][] legOffsets = {
-                {0, 0}, {w - legSize, 0}, {0, d - legSize}, {w - legSize, d - legSize}
-        };
-
-        for (double[] offset : legOffsets) {
-            Box leg = new Box(legSize, legHeight, legSize);
-            leg.setMaterial(legMaterial);
-            leg.getTransforms().add(new Translate(x + offset[0] + legSize / 2.0, legHeight / 2.0, y + offset[1] + legSize / 2.0));
+        // Legs
+        double[][] legPositions = {{3, 3}, {w - 6, 3}, {3, d - 6}, {w - 6, d - 6}};
+        for (double[] pos : legPositions) {
+            Cylinder leg = new Cylinder(2, legH);
+            leg.setMaterial(legMat);
+            leg.getTransforms().add(new Translate(x + pos[0] + 2, legH / 2, y + pos[1] + 2));
             group.getChildren().add(leg);
         }
+
+        // Backrest box
+        Box back = new Box(w - 6, backH, 2);
+        back.setMaterial(backMat);
+        back.getTransforms().add(new Translate(x + w / 2, legH + seatH + backH / 2, y + 4));
+        group.getChildren().add(back);
 
         return group;
     }
 
-    private static Group createTable(FurnitureItem item) {
-        Group group = new Group();
-        double x = item.getX();
-        double y = item.getY();
-        double w = item.getWidth();
-        double d = item.getHeight();
-        double topThickness = 10;
-        double legHeight = 40;
+    private static Group createTable(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double topH = 6, legH = 48;
 
-        PhongMaterial topMaterial = new PhongMaterial(item.getPrimaryColor());
-        PhongMaterial legMaterial = new PhongMaterial(item.getSecondaryColor());
+        PhongMaterial topMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial legMat = woodMaterial();
 
-        // Tabletop
-        Box top = new Box(w, topThickness, d);
-        top.setMaterial(topMaterial);
-        top.getTransforms().add(new Translate(x + w / 2.0, legHeight + topThickness / 2.0, y + d / 2.0));
+        Box top = new Box(w, topH, d);
+        top.setMaterial(topMat);
+        top.getTransforms().add(new Translate(x + w / 2, legH + topH / 2, y + d / 2));
         group.getChildren().add(top);
 
-        // Legs
-        double legSize = 5;
-        double[][] legOffsets = {
-                {0, 0}, {w - legSize, 0}, {0, d - legSize}, {w - legSize, d - legSize}
-        };
-
-        for (double[] offset : legOffsets) {
-            Box leg = new Box(legSize, legHeight, legSize);
-            leg.setMaterial(legMaterial);
-            leg.getTransforms().add(new Translate(x + offset[0] + legSize / 2.0, legHeight / 2.0, y + offset[1] + legSize / 2.0));
+        double[][] legOffsets = {{4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4}};
+        for (double[] pos : legOffsets) {
+            Cylinder leg = new Cylinder(3, legH);
+            leg.setMaterial(legMat);
+            leg.getTransforms().add(new Translate(x + pos[0], legH / 2, y + pos[1]));
             group.getChildren().add(leg);
         }
 
         return group;
     }
 
-    private static Group createBed(FurnitureItem item) {
-        Group group = new Group();
-        double x = item.getX();
-        double y = item.getY();
-        double w = item.getWidth();
-        double d = item.getHeight();
-        double baseHeight = 20;
-        double headboardHeight = 50;
+    private static Group createBed(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double baseH = 10, mattressH = 10, pillowH = 4;
 
-        PhongMaterial baseMaterial = new PhongMaterial(item.getPrimaryColor());
-        PhongMaterial headboardMaterial = new PhongMaterial(item.getSecondaryColor());
+        PhongMaterial baseMat = woodMaterial();
+        PhongMaterial mattressMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial pillowMat = smoothMaterial(item.getSecondaryColor());
 
-        // Bed base
-        Box base = new Box(w, baseHeight, d);
-        base.setMaterial(baseMaterial);
-        base.getTransforms().add(new Translate(x + w / 2.0, baseHeight / 2.0, y + d / 2.0));
+        // Base frame
+        Box base = new Box(w, baseH, d);
+        base.setMaterial(baseMat);
+        base.getTransforms().add(new Translate(x + w / 2, baseH / 2, y + d / 2));
         group.getChildren().add(base);
 
-        // Headboard
-        Box headboard = new Box(w, headboardHeight, 5);
-        headboard.setMaterial(headboardMaterial);
-        headboard.getTransforms().add(new Translate(x + w / 2.0, headboardHeight / 2.0 + baseHeight, y + 2.5));
-        group.getChildren().add(headboard);
+        // Mattress
+        Box mattress = new Box(w - 6, mattressH, d - 6);
+        mattress.setMaterial(mattressMat);
+        mattress.getTransforms().add(new Translate(x + w / 2, baseH + mattressH / 2, y + d / 2));
+        group.getChildren().add(mattress);
+
+        // Pillows (box-style)
+        Box pillow1 = new Box(w / 5, pillowH, 6);
+        pillow1.setMaterial(pillowMat);
+        pillow1.getTransforms().add(new Translate(x + w / 3, baseH + mattressH + pillowH / 2, y + 6));
+
+        Box pillow2 = new Box(w / 5, pillowH, 6);
+        pillow2.setMaterial(pillowMat);
+        pillow2.getTransforms().add(new Translate(x + 2 * w / 3, baseH + mattressH + pillowH / 2, y + 6));
+
+        group.getChildren().addAll(pillow1, pillow2);
 
         return group;
     }
 
-    private static Group createSofa(FurnitureItem item) {
-        Group group = new Group();
-        double x = item.getX();
-        double y = item.getY();
-        double w = item.getWidth();
-        double d = item.getHeight();
-        double baseHeight = 20;
-        double backHeight = 30;
-        double armWidth = 10;
+    private static Group createSofa(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double baseH = 14, cushionH = 10, backH = 20, armH = 20;
 
-        PhongMaterial baseMaterial = new PhongMaterial(item.getPrimaryColor());
-        PhongMaterial detailMaterial = new PhongMaterial(item.getSecondaryColor());
+        PhongMaterial baseMat = woodMaterial();
+        PhongMaterial cushionMat = smoothMaterial(item.getPrimaryColor());
+        PhongMaterial armMat = smoothMaterial(item.getSecondaryColor());
 
-        // Seat base
-        Box base = new Box(w - 2 * armWidth, baseHeight, d);
-        base.setMaterial(baseMaterial);
-        base.getTransforms().add(new Translate(x + w / 2.0, baseHeight / 2.0, y + d / 2.0));
+        // Base
+        Box base = new Box(w, baseH, d);
+        base.setMaterial(baseMat);
+        base.getTransforms().add(new Translate(x + w / 2, baseH / 2, y + d / 2));
         group.getChildren().add(base);
+
+        // Cushion
+        Box cushion = new Box(w - 20, cushionH, d - 10);
+        cushion.setMaterial(cushionMat);
+        cushion.getTransforms().add(new Translate(x + w / 2, baseH + cushionH / 2, y + d / 2));
+        group.getChildren().add(cushion);
 
         // Backrest
-        Box back = new Box(w - 2 * armWidth, backHeight, 5);
-        back.setMaterial(detailMaterial);
-        back.getTransforms().add(new Translate(x + w / 2.0, baseHeight + backHeight / 2.0, y + 2.5));
+        Box back = new Box(w - 20, backH, 4);
+        back.setMaterial(cushionMat);
+        back.getTransforms().add(new Translate(x + w / 2, baseH + cushionH + backH / 2, y + 4));
         group.getChildren().add(back);
 
-        // Left and Right Arms
-        Box leftArm = new Box(armWidth, baseHeight + backHeight, 5);
-        leftArm.setMaterial(detailMaterial);
-        leftArm.getTransforms().add(new Translate(x + armWidth / 2.0, (baseHeight + backHeight) / 2.0, y + d / 2.0));
-        group.getChildren().add(leftArm);
+        // Armrests
+        Box leftArm = new Box(8, armH, 6);
+        leftArm.setMaterial(armMat);
+        leftArm.getTransforms().add(new Translate(x + 4, baseH + armH / 2, y + d / 2));
 
-        Box rightArm = new Box(armWidth, baseHeight + backHeight, 5);
-        rightArm.setMaterial(detailMaterial);
-        rightArm.getTransforms().add(new Translate(x + w - armWidth / 2.0, (baseHeight + backHeight) / 2.0, y + d / 2.0));
-        group.getChildren().add(rightArm);
+        Box rightArm = new Box(8, armH, 6);
+        rightArm.setMaterial(armMat);
+        rightArm.getTransforms().add(new Translate(x + w - 4, baseH + armH / 2, y + d / 2));
+
+        group.getChildren().addAll(leftArm, rightArm);
 
         return group;
     }
 
-    private static Group createBookshelf(FurnitureItem item) {
-        Group group = new Group();
-        double x = item.getX();
-        double y = item.getY();
-        double w = item.getWidth();
-        double h = item.getHeight();
-        double depth = 20;
-        double shelfThickness = 5;
-        int shelfCount = 4;
+    private static Group createBookshelf(FurnitureItem item, Group group) {
+        double x = item.getX(), y = item.getY(), w = item.getWidth(), h = item.getHeight(), d = 18;
+        int shelves = 5;
 
-        PhongMaterial shelfMaterial = new PhongMaterial(item.getPrimaryColor());
+        PhongMaterial woodMat = woodMaterial();
+        PhongMaterial backMat = smoothMaterial(Color.rgb(60, 60, 60));
 
-        // Side panels
-        Box left = new Box(shelfThickness, h, depth);
-        left.setMaterial(shelfMaterial);
-        left.getTransforms().add(new Translate(x + shelfThickness / 2.0, h / 2.0, y + depth / 2.0));
-        group.getChildren().add(left);
+        // Left + right walls
+        Box left = new Box(5, h, d);
+        left.setMaterial(woodMat);
+        left.getTransforms().add(new Translate(x + 2.5, h / 2, y + d / 2));
 
-        Box right = new Box(shelfThickness, h, depth);
-        right.setMaterial(shelfMaterial);
-        right.getTransforms().add(new Translate(x + w - shelfThickness / 2.0, h / 2.0, y + depth / 2.0));
-        group.getChildren().add(right);
+        Box right = new Box(5, h, d);
+        right.setMaterial(woodMat);
+        right.getTransforms().add(new Translate(x + w - 2.5, h / 2, y + d / 2));
 
         // Back panel
-        Box back = new Box(w, h, shelfThickness);
-        back.setMaterial(new PhongMaterial(Color.DARKGRAY));
-        back.getTransforms().add(new Translate(x + w / 2.0, h / 2.0, y + shelfThickness / 2.0));
-        group.getChildren().add(back);
+        Box back = new Box(w, h, 2);
+        back.setMaterial(backMat);
+        back.getTransforms().add(new Translate(x + w / 2, h / 2, y + 1));
+
+        group.getChildren().addAll(left, right, back);
 
         // Shelves
-        for (int i = 0; i <= shelfCount; i++) {
-            double shelfY = i * (h / shelfCount);
-            Box shelf = new Box(w - 2 * shelfThickness, shelfThickness, depth);
-            shelf.setMaterial(shelfMaterial);
-            shelf.getTransforms().add(new Translate(x + w / 2.0, shelfY + shelfThickness / 2.0, y + depth / 2.0));
+        for (int i = 0; i <= shelves; i++) {
+            Box shelf = new Box(w - 10, 3, d);
+            shelf.setMaterial(woodMat);
+            shelf.getTransforms().add(new Translate(x + w / 2, 10 + i * (h / (shelves + 1)), y + d / 2));
             group.getChildren().add(shelf);
         }
 
