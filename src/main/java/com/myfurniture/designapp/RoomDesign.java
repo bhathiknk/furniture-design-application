@@ -1,6 +1,6 @@
 package com.myfurniture.designapp;
 
-import java.awt.*;
+import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.List;
 
