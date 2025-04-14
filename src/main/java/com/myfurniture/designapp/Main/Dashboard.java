@@ -1,5 +1,8 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Main;
 
+import com.myfurniture.designapp.Core.DesignManager;
+import com.myfurniture.designapp.UI.RoomDesigner2D;
+import com.myfurniture.designapp.UI.RoomRenderer3D;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;

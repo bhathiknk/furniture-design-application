@@ -1,5 +1,6 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Factory;
 
+import com.myfurniture.designapp.Core.FurnitureItem;
 import javafx.scene.paint.Color;
 
 public class FurnitureFactory {

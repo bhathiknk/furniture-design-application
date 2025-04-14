@@ -1,5 +1,9 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.UI;
 
+import com.myfurniture.designapp.Core.DesignManager;
+import com.myfurniture.designapp.Core.FurnitureItem;
+import com.myfurniture.designapp.Core.RoomDesign;
+import com.myfurniture.designapp.Factory.FurnitureFactory;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
@@ -96,13 +100,25 @@ public class RoomDesigner2D extends BorderPane {
         TitledPane furniturePane = new TitledPane("Add Furniture", furnitureButtons);
         furniturePane.setExpanded(true);
 
+        // ========== Size Adjustment Buttons ==========
+        Button btnIncreaseSize = new Button("Increase Size");
+        btnIncreaseSize.setMaxWidth(Double.MAX_VALUE);
+        btnIncreaseSize.setOnAction(e -> canvas.adjustSize(true));
+
+        Button btnDecreaseSize = new Button("Decrease Size");
+        btnDecreaseSize.setMaxWidth(Double.MAX_VALUE);
+        btnDecreaseSize.setOnAction(e -> canvas.adjustSize(false));
+
+        TitledPane sizePane = new TitledPane("Adjust Size", new VBox(10, btnIncreaseSize, btnDecreaseSize));
+        sizePane.setExpanded(false);
+
         // ========== Rotate Button ==========
         Button btnRotateSelected = new Button("Rotate Selected");
         btnRotateSelected.setMaxWidth(Double.MAX_VALUE);
         btnRotateSelected.setOnAction(e -> canvas.rotateSelected(90));
 
         // ========== Assemble Left Panel ==========
-        palettePanel.getChildren().addAll(roomPane, colorPane, furniturePane, btnRotateSelected);
+        palettePanel.getChildren().addAll(roomPane, colorPane, furniturePane, sizePane, btnRotateSelected);
 
         // ========== 2D Canvas (Centered Wrapper) ==========
         canvas = new DesignerCanvas(currentRoomDesign);
@@ -159,7 +175,7 @@ public class RoomDesigner2D extends BorderPane {
             draw();
             setOnMousePressed(this::onMousePressed);
             setOnMouseDragged(this::onMouseDragged);
-            // Keep the last selection so the item remains accessible for rotation
+            // Keep the last selection so the item remains accessible for rotation/size adjustment
             setOnMouseReleased(e -> {
                 if (selectedItem != null) {
                     lastSelectedItem = selectedItem;
@@ -181,6 +197,7 @@ public class RoomDesigner2D extends BorderPane {
                     break;
                 }
             }
+            draw();
         }
 
         private void onMouseDragged(MouseEvent e) {
@@ -191,6 +208,33 @@ public class RoomDesigner2D extends BorderPane {
                 newY = Math.max(0, Math.min(newY, roomDesign.getRoomHeight() - selectedItem.getHeight()));
                 selectedItem.setX((int) newX);
                 selectedItem.setY((int) newY);
+                draw();
+                if (update3DCallback != null) update3DCallback.run();
+            }
+        }
+
+        /**
+         * Adjust the size of the selected (or last-selected) furniture.
+         * The size is increased (multiplied by 1.1) if increase is true,
+         * otherwise decreased (multiplied by 0.9). The center of the furniture remains constant.
+         */
+        public void adjustSize(boolean increase) {
+            FurnitureItem itemToAdjust = (selectedItem != null) ? selectedItem : lastSelectedItem;
+            if (itemToAdjust != null) {
+                double factor = increase ? 1.1 : 0.9;
+                // Get the current center position
+                double centerX = itemToAdjust.getX() + itemToAdjust.getWidth() / 2.0;
+                double centerY = itemToAdjust.getY() + itemToAdjust.getHeight() / 2.0;
+                // Calculate new dimensions
+                int newWidth = (int) (itemToAdjust.getWidth() * factor);
+                int newHeight = (int) (itemToAdjust.getHeight() * factor);
+                // Update position so that center remains the same
+                int newX = (int) (centerX - newWidth / 2.0);
+                int newY = (int) (centerY - newHeight / 2.0);
+                itemToAdjust.setWidth(newWidth);
+                itemToAdjust.setHeight(newHeight);
+                itemToAdjust.setX(newX);
+                itemToAdjust.setY(newY);
                 draw();
                 if (update3DCallback != null) update3DCallback.run();
             }
@@ -229,14 +273,13 @@ public class RoomDesigner2D extends BorderPane {
 
         private void drawFurniture(GraphicsContext gc, FurnitureItem item) {
             gc.save();
-            // Translate so that (0,0) becomes the top-left of the furniture
+            // Apply translation and rotation for the furniture item
             gc.translate(item.getX(), item.getY());
-            // Translate to center, rotate, then translate back
             gc.translate(item.getWidth() / 2.0, item.getHeight() / 2.0);
             gc.rotate(item.getRotation());
             gc.translate(-item.getWidth() / 2.0, -item.getHeight() / 2.0);
 
-            // Draw based on furniture type (using relative coordinates)
+            // Draw the furniture depending on type
             switch (item.getType().toLowerCase()) {
                 case "chair":
                     gc.setFill(item.getPrimaryColor());
@@ -298,7 +341,14 @@ public class RoomDesigner2D extends BorderPane {
                     gc.setFill(item.getPrimaryColor());
                     gc.fillRect(0, 0, item.getWidth(), item.getHeight());
             }
-            gc.setStroke(Color.DARKGRAY);
+            // Highlight the selected furniture with a red stroke
+            if (item == selectedItem || item == lastSelectedItem) {
+                gc.setStroke(Color.RED);
+                gc.setLineWidth(3);
+            } else {
+                gc.setStroke(Color.DARKGRAY);
+                gc.setLineWidth(1);
+            }
             gc.strokeRect(0, 0, item.getWidth(), item.getHeight());
             gc.restore();
         }

@@ -1,5 +1,9 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Main;
 
+import com.myfurniture.designapp.Core.DesignManager;
+import com.myfurniture.designapp.Factory.FurnitureFactory;
+import com.myfurniture.designapp.Core.FurnitureItem;
+import com.myfurniture.designapp.Core.RoomDesign;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;

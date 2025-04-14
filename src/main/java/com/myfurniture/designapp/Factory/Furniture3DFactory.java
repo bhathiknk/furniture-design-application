@@ -1,5 +1,6 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Factory;
 
+import com.myfurniture.designapp.Core.FurnitureItem;
 import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.canvas.Canvas;
@@ -7,7 +8,6 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.PointLight;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.Cylinder;
 import javafx.scene.transform.Rotate;

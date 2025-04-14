@@ -1,4 +1,4 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Core;
 
 public class DesignManager {
     private RoomDesign currentDesign;

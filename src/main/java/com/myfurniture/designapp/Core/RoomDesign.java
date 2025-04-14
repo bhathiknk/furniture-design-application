@@ -1,4 +1,4 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Core;
 
 import javafx.scene.paint.Color;
 import java.util.ArrayList;

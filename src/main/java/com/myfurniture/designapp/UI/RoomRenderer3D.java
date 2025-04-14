@@ -1,5 +1,10 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.UI;
 
+import com.myfurniture.designapp.Factory.BoothRoomFactory;
+import com.myfurniture.designapp.Core.DesignManager;
+import com.myfurniture.designapp.Core.FurnitureItem;
+import com.myfurniture.designapp.Core.RoomDesign;
+import com.myfurniture.designapp.Factory.Furniture3DFactory;
 import javafx.scene.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;

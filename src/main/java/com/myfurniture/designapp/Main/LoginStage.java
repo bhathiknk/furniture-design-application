@@ -1,5 +1,6 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Main;
 
+import com.myfurniture.designapp.Core.DesignManager;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;

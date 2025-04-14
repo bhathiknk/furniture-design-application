@@ -1,4 +1,4 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Util;
 
 // Utility class for helper methods (if needed)
 public class Util {

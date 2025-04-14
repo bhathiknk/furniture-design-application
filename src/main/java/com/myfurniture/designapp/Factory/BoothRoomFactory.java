@@ -1,5 +1,6 @@
-package com.myfurniture.designapp;
+package com.myfurniture.designapp.Factory;
 
+import com.myfurniture.designapp.Core.RoomDesign;
 import javafx.scene.Group;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
