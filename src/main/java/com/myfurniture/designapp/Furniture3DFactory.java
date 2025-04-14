@@ -1,5 +1,6 @@
 package com.myfurniture.designapp;
 
+import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -9,28 +10,54 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.PointLight;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.Cylinder;
+import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 
 public class Furniture3DFactory {
 
     public static Group createFurniture3D(FurnitureItem item) {
-        Group group = new Group();
-        group.getChildren().add(new PointLight(Color.WHITE));
-
+        Group group;
         switch (item.getType().toLowerCase()) {
-            case "chair": return createChair(item, group);
-            case "table": return createTable(item, group);
-            case "bed": return createBed(item, group);
-            case "sofa": return createSofa(item, group);
-            case "bookshelf": return createBookshelf(item, group);
-            case "wardrobe": return createWardrobe(item, group);
-            case "dining table": return createDiningTable(item, group);
-            case "lamp": return createLamp(item, group);
-            case "tv stand": return createTVStand(item, group);
-            case "coffee table": return createCoffeeTable(item, group);
-            default: return group;
+            case "chair":
+                group = createChair(item, new Group());
+                break;
+            case "table":
+                group = createTable(item, new Group());
+                break;
+            case "bed":
+                group = createBed(item, new Group());
+                break;
+            case "sofa":
+                group = createSofa(item, new Group());
+                break;
+            case "bookshelf":
+                group = createBookshelf(item, new Group());
+                break;
+            case "wardrobe":
+                group = createWardrobe(item, new Group());
+                break;
+            case "dining table":
+                group = createDiningTable(item, new Group());
+                break;
+            case "lamp":
+                group = createLamp(item, new Group());
+                break;
+            case "tv stand":
+                group = createTVStand(item, new Group());
+                break;
+            case "coffee table":
+                group = createCoffeeTable(item, new Group());
+                break;
+            default:
+                group = new Group();
+                break;
         }
-
+        // Compute pivot using the furniture's center (using the item values as defined in creation methods)
+        double pivotX = item.getX() + item.getWidth() / 2.0;
+        double pivotZ = item.getY() + item.getHeight() / 2.0;
+        // Apply rotation transform based on the item's rotation (around Y axis), using computed pivot
+        group.getTransforms().add(new Rotate(item.getRotation(), pivotX, 0, pivotZ, new Point3D(0, 1, 0)));
+        return group;
     }
 
     private static PhongMaterial woodMaterial() {
@@ -72,7 +99,7 @@ public class Furniture3DFactory {
         group.getChildren().add(seat);
 
         // Legs
-        double[][] legPositions = {{3, 3}, {w - 6, 3}, {3, d - 6}, {w - 6, d - 6}};
+        double[][] legPositions = { {3, 3}, {w - 6, 3}, {3, d - 6}, {w - 6, d - 6} };
         for (double[] pos : legPositions) {
             Cylinder leg = new Cylinder(2, legH);
             leg.setMaterial(legMat);
@@ -101,7 +128,7 @@ public class Furniture3DFactory {
         top.getTransforms().add(new Translate(x + w / 2, legH + topH / 2, y + d / 2));
         group.getChildren().add(top);
 
-        double[][] legOffsets = {{4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4}};
+        double[][] legOffsets = { {4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4} };
         for (double[] pos : legOffsets) {
             Cylinder leg = new Cylinder(3, legH);
             leg.setMaterial(legMat);
@@ -114,37 +141,61 @@ public class Furniture3DFactory {
 
     private static Group createBed(FurnitureItem item, Group group) {
         double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
-        double baseH = 10, mattressH = 10, pillowH = 4;
+        double baseH = 10, mattressH = 10, pillowH = 4, legH = 15;
 
         PhongMaterial baseMat = woodMaterial();
         PhongMaterial mattressMat = smoothMaterial(item.getPrimaryColor());
         PhongMaterial pillowMat = smoothMaterial(item.getSecondaryColor());
+        PhongMaterial legMat = woodMaterial();
 
-        // Base frame
-        Box base = new Box(w, baseH, d);
-        base.setMaterial(baseMat);
-        base.getTransforms().add(new Translate(x + w / 2, baseH / 2, y + d / 2));
-        group.getChildren().add(base);
+        // Mattress dimensions
+        double mattressExtraWidth = 5;
+        double mattressExtraDepth = 150;
+        double mattressW = w + mattressExtraWidth;
+        double mattressD = d + mattressExtraDepth;
+
+        // Corrected mattress center Z
+        double mattressZ = y + mattressD / 2;
 
         // Mattress
-        Box mattress = new Box(w - 6, mattressH, d - 6);
+        Box mattress = new Box(mattressW, mattressH, mattressD);
         mattress.setMaterial(mattressMat);
-        mattress.getTransforms().add(new Translate(x + w / 2, baseH + mattressH / 2, y + d / 2));
+        mattress.getTransforms().add(new Translate(x + w / 2, baseH + mattressH / 2, mattressZ));
         group.getChildren().add(mattress);
 
-        // Pillows (box-style)
-        Box pillow1 = new Box(w / 5, pillowH, 6);
+        // Pillows (placed near head of the new deeper mattress)
+        Box pillow1 = new Box(w / 5, pillowH, 10);
         pillow1.setMaterial(pillowMat);
-        pillow1.getTransforms().add(new Translate(x + w / 3, baseH + mattressH + pillowH / 2, y + 6));
+        pillow1.getTransforms().add(new Translate(x + w / 3, baseH + mattressH + pillowH / 2, y + 12));
 
-        Box pillow2 = new Box(w / 5, pillowH, 6);
+        Box pillow2 = new Box(w / 5, pillowH, 10);
         pillow2.setMaterial(pillowMat);
-        pillow2.getTransforms().add(new Translate(x + 2 * w / 3, baseH + mattressH + pillowH / 2, y + 6));
+        pillow2.getTransforms().add(new Translate(x + 2 * w / 3, baseH + mattressH + pillowH / 2, y + 12));
 
         group.getChildren().addAll(pillow1, pillow2);
 
+        // Legs – fixed at corners of mattress, not original frame
+        double legOffset = 6;
+        double[][] legPositions = {
+                {x + legOffset, y + legOffset}, // front-left
+                {x + w - legOffset, y + legOffset}, // front-right
+                {x + legOffset, y + mattressD - legOffset}, // back-left
+                {x + w - legOffset, y + mattressD - legOffset} // back-right
+        };
+
+        for (double[] pos : legPositions) {
+            Cylinder leg = new Cylinder(3, legH);
+            leg.setMaterial(legMat);
+            leg.getTransforms().add(new Translate(pos[0], legH / 2, pos[1]));
+            group.getChildren().add(leg);
+        }
+
         return group;
     }
+
+
+
+
 
     private static Group createSofa(FurnitureItem item, Group group) {
         double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
@@ -176,11 +227,9 @@ public class Furniture3DFactory {
         Box leftArm = new Box(8, armH, 6);
         leftArm.setMaterial(armMat);
         leftArm.getTransforms().add(new Translate(x + 4, baseH + armH / 2, y + d / 2));
-
         Box rightArm = new Box(8, armH, 6);
         rightArm.setMaterial(armMat);
         rightArm.getTransforms().add(new Translate(x + w - 4, baseH + armH / 2, y + d / 2));
-
         group.getChildren().addAll(leftArm, rightArm);
 
         return group;
@@ -197,16 +246,13 @@ public class Furniture3DFactory {
         Box left = new Box(5, h, d);
         left.setMaterial(woodMat);
         left.getTransforms().add(new Translate(x + 2.5, h / 2, y + d / 2));
-
         Box right = new Box(5, h, d);
         right.setMaterial(woodMat);
         right.getTransforms().add(new Translate(x + w - 2.5, h / 2, y + d / 2));
-
         // Back panel
         Box back = new Box(w, h, 2);
         back.setMaterial(backMat);
         back.getTransforms().add(new Translate(x + w / 2, h / 2, y + 1));
-
         group.getChildren().addAll(left, right, back);
 
         // Shelves
@@ -288,5 +334,4 @@ public class Furniture3DFactory {
         }
         return group;
     }
-
 }

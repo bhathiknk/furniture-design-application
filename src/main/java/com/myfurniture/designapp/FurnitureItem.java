@@ -9,6 +9,7 @@ public class FurnitureItem {
     private Color primaryColor;
     private Color secondaryColor;
     private String material;
+    private double rotation; // New rotation property in degrees
 
     public FurnitureItem(String type, int x, int y, int width, int height,
                          Color primaryColor, Color secondaryColor, String material) {
@@ -20,6 +21,7 @@ public class FurnitureItem {
         this.primaryColor = primaryColor;
         this.secondaryColor = secondaryColor;
         this.material = material;
+        this.rotation = 0.0;  // Default rotation is 0 degrees
     }
 
     public String getType() {
@@ -76,5 +78,17 @@ public class FurnitureItem {
 
     public String getMaterial() {
         return material;
+    }
+
+    public void setMaterial(String material) {
+        this.material = material;
+    }
+
+    public double getRotation() {
+        return rotation;
+    }
+
+    public void setRotation(double rotation) {
+        this.rotation = rotation;
     }
 }
