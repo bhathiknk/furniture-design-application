@@ -1,46 +1,47 @@
 package com.myfurniture.designapp;
 
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.geometry.Insets;
 
 public class RoomDesigner2D extends BorderPane {
-    private DesignManager designManager;
-    private RoomDesign currentRoomDesign;
+    private final DesignManager designManager;
+    private final RoomDesign currentRoomDesign;
     private DesignerCanvas canvas;
     private VBox palettePanel;
-    private TextField txtRoomWidth;
-    private TextField txtRoomHeight;
-    private Button btnRoomColor;
-    private Button btnApplyRoomSettings;
-    private Button btnPrimaryColor;
-    private Button btnSecondaryColor;
     private Color chosenPrimary = Color.ORANGE;
     private Color chosenSecondary = Color.DARKGRAY;
     private Runnable update3DCallback;
+    private TextField txtRoomWidth;
+    private TextField txtRoomHeight;
 
     public RoomDesigner2D(DesignManager designManager, Runnable update3DCallback) {
         this.designManager = designManager;
         this.update3DCallback = update3DCallback;
         currentRoomDesign = new RoomDesign(800, 600, Color.LIGHTGRAY);
         designManager.setCurrentDesign(currentRoomDesign);
-        initComponents();
+        initUI();
     }
 
-    private void initComponents() {
-        palettePanel = new VBox(10);
-        palettePanel.setPadding(new Insets(10));
+    private void initUI() {
+        palettePanel = new VBox(15);
+        palettePanel.setPadding(new Insets(15));
+        palettePanel.setPrefWidth(300);
+        palettePanel.setStyle("-fx-background-color: #f8f8f8;");
 
-        Label lblRoomWidth = new Label("Room Width:");
-        txtRoomWidth = new TextField(String.valueOf(currentRoomDesign.getRoomWidth()));
-        Label lblRoomHeight = new Label("Room Height:");
-        txtRoomHeight = new TextField(String.valueOf(currentRoomDesign.getRoomHeight()));
+        VBox roomSettingsBox = new VBox(10);
+        roomSettingsBox.getChildren().addAll(
+                new Label("Room Width:"), txtRoomWidth = new TextField(String.valueOf(currentRoomDesign.getRoomWidth())),
+                new Label("Room Height:"), txtRoomHeight = new TextField(String.valueOf(currentRoomDesign.getRoomHeight()))
+        );
 
-        btnRoomColor = new Button("Select Room Color");
+        Button btnRoomColor = new Button("Select Room Color");
+        btnRoomColor.setMaxWidth(Double.MAX_VALUE);
         btnRoomColor.setOnAction(e -> {
             Color newColor = ColorPickerDialog.showDialog(currentRoomDesign.getRoomColor());
             if (newColor != null) {
@@ -50,59 +51,62 @@ public class RoomDesigner2D extends BorderPane {
             }
         });
 
-        btnApplyRoomSettings = new Button("Apply Room Settings");
-        btnApplyRoomSettings.setOnAction(e -> applyRoomSettings());
+        Button btnApplyRoom = new Button("Apply Settings");
+        btnApplyRoom.setMaxWidth(Double.MAX_VALUE);
+        btnApplyRoom.setOnAction(e -> applyRoomSettings());
 
-        Label lblPrimary = new Label("Furniture Primary Color:");
-        btnPrimaryColor = new Button("Select Primary Color");
+        TitledPane roomPane = new TitledPane("Room Settings", new VBox(10, roomSettingsBox, btnRoomColor, btnApplyRoom));
+        roomPane.setExpanded(true);
+
+        Button btnPrimaryColor = new Button("Select Primary Color");
+        btnPrimaryColor.setMaxWidth(Double.MAX_VALUE);
         btnPrimaryColor.setOnAction(e -> {
             Color newColor = ColorPickerDialog.showDialog(chosenPrimary);
             if (newColor != null) chosenPrimary = newColor;
         });
 
-        Label lblSecondary = new Label("Furniture Secondary Color:");
-        btnSecondaryColor = new Button("Select Secondary Color");
+        Button btnSecondaryColor = new Button("Select Secondary Color");
+        btnSecondaryColor.setMaxWidth(Double.MAX_VALUE);
         btnSecondaryColor.setOnAction(e -> {
             Color newColor = ColorPickerDialog.showDialog(chosenSecondary);
             if (newColor != null) chosenSecondary = newColor;
         });
 
-        Label lblAddFurniture = new Label("Add Furniture:");
-        Button btnAddChair = new Button("Chair");
-        btnAddChair.setOnAction(e -> addFurniture("Chair"));
-        Button btnAddTable = new Button("Table");
-        btnAddTable.setOnAction(e -> addFurniture("Table"));
-        Button btnAddBed = new Button("Bed");
-        btnAddBed.setOnAction(e -> addFurniture("Bed"));
-        Button btnAddSofa = new Button("Sofa");
-        btnAddSofa.setOnAction(e -> addFurniture("Sofa"));
-        Button btnAddBookshelf = new Button("Bookshelf");
-        btnAddBookshelf.setOnAction(e -> addFurniture("Bookshelf"));
+        TitledPane colorPane = new TitledPane("Furniture Colors", new VBox(10, btnPrimaryColor, btnSecondaryColor));
+        colorPane.setExpanded(false);
 
-        // New furniture buttons
-        Button btnAddWardrobe = new Button("Wardrobe");
-        btnAddWardrobe.setOnAction(e -> addFurniture("Wardrobe"));
-        Button btnAddDining = new Button("Dining Table");
-        btnAddDining.setOnAction(e -> addFurniture("Dining Table"));
-        Button btnAddLamp = new Button("Lamp");
-        btnAddLamp.setOnAction(e -> addFurniture("Lamp"));
-        Button btnAddTV = new Button("TV Stand");
-        btnAddTV.setOnAction(e -> addFurniture("TV Stand"));
-        Button btnAddCoffee = new Button("Coffee Table");
-        btnAddCoffee.setOnAction(e -> addFurniture("Coffee Table"));
+        FlowPane furnitureButtons = new FlowPane(10, 10);
+        furnitureButtons.setPrefWrapLength(260);
 
-        palettePanel.getChildren().addAll(
-                lblRoomWidth, txtRoomWidth, lblRoomHeight, txtRoomHeight,
-                btnRoomColor, btnApplyRoomSettings,
-                lblPrimary, btnPrimaryColor, lblSecondary, btnSecondaryColor,
-                lblAddFurniture,
-                new HBox(10, btnAddChair, btnAddTable, btnAddBed, btnAddSofa, btnAddBookshelf),
-                new HBox(10, btnAddWardrobe, btnAddDining, btnAddLamp, btnAddTV, btnAddCoffee)
-        );
+        String[] furnitureTypes = {
+                "Chair", "Table", "Bed", "Sofa", "Bookshelf",
+                "Wardrobe", "Dining Table", "Lamp", "TV Stand", "Coffee Table"
+        };
 
+        for (String type : furnitureTypes) {
+            Button btn = new Button(type);
+            btn.setOnAction(e -> addFurniture(type));
+            btn.setPrefWidth(120);
+            furnitureButtons.getChildren().add(btn);
+        }
+
+        TitledPane furniturePane = new TitledPane("Add Furniture", furnitureButtons);
+        furniturePane.setExpanded(true);
+
+        palettePanel.getChildren().addAll(roomPane, colorPane, furniturePane);
+
+        // ========== 2D Canvas (Centered Wrapper) ==========
         canvas = new DesignerCanvas(currentRoomDesign);
+        StackPane canvasWrapper = new StackPane(canvas);
+        canvasWrapper.setStyle("-fx-background-color: white;");
+        canvasWrapper.setAlignment(Pos.CENTER);
+
+        // Bind canvasWrapper to available size
+        canvasWrapper.widthProperty().addListener((obs, oldVal, newVal) -> canvas.draw());
+        canvasWrapper.heightProperty().addListener((obs, oldVal, newVal) -> canvas.draw());
+
         setLeft(palettePanel);
-        setCenter(new ScrollPane(canvas));
+        setCenter(canvasWrapper);
     }
 
     private void applyRoomSettings() {
@@ -135,7 +139,7 @@ public class RoomDesigner2D extends BorderPane {
     }
 
     private class DesignerCanvas extends Canvas {
-        private RoomDesign roomDesign;
+        private final RoomDesign roomDesign;
         private FurnitureItem selectedItem = null;
         private double offsetX, offsetY;
 
@@ -177,13 +181,23 @@ public class RoomDesigner2D extends BorderPane {
 
         public void draw() {
             GraphicsContext gc = getGraphicsContext2D();
+            double centerX = (getWidth() - roomDesign.getRoomWidth()) / 2.0;
+            double centerY = (getHeight() - roomDesign.getRoomHeight()) / 2.0;
+
+            gc.clearRect(0, 0, getWidth(), getHeight());
+            gc.save();
+            gc.translate(centerX, centerY);
+
             gc.setFill(roomDesign.getRoomColor());
-            gc.fillRect(0, 0, getWidth(), getHeight());
+            gc.fillRect(0, 0, roomDesign.getRoomWidth(), roomDesign.getRoomHeight());
             gc.setStroke(Color.BLACK);
             gc.strokeRect(0, 0, roomDesign.getRoomWidth(), roomDesign.getRoomHeight());
+
             for (FurnitureItem item : roomDesign.getFurniture()) {
                 drawFurniture(gc, item);
             }
+
+            gc.restore();
         }
 
         private void drawFurniture(GraphicsContext gc, FurnitureItem item) {
