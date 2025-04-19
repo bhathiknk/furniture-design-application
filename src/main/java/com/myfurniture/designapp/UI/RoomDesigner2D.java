@@ -419,8 +419,35 @@ public class RoomDesigner2D extends BorderPane {
             return false;
         }
 
-        public void adjustSize(boolean inc) { /* same as before */ }
-        public void rotateSelected(double ang) { /* same as before */ }
+        /** Adjust selected or last-selected furniture size around its center */
+        public void adjustSize(boolean increase) {
+            FurnitureItem itemToAdjust = (selectedItem != null) ? selectedItem : lastSelectedItem;
+            if (itemToAdjust != null) {
+                double factor = increase ? 1.1 : 0.9;
+                double centerX = itemToAdjust.getX() + itemToAdjust.getWidth() / 2.0;
+                double centerY = itemToAdjust.getY() + itemToAdjust.getHeight() / 2.0;
+                int newW = (int)(itemToAdjust.getWidth()  * factor);
+                int newH = (int)(itemToAdjust.getHeight() * factor);
+                int newX = (int)(centerX - newW/2.0);
+                int newY = (int)(centerY - newH/2.0);
+                itemToAdjust.setWidth(newW);
+                itemToAdjust.setHeight(newH);
+                itemToAdjust.setX(newX);
+                itemToAdjust.setY(newY);
+                draw();
+                if (update3DCallback != null) update3DCallback.run();
+            }
+        }
+
+        /** Rotate selected or last-selected furniture by given angle around its center */
+        public void rotateSelected(double angle) {
+            FurnitureItem itemToRotate = (selectedItem != null) ? selectedItem : lastSelectedItem;
+            if (itemToRotate != null) {
+                itemToRotate.setRotation((itemToRotate.getRotation() + angle) % 360);
+                draw();
+                if (update3DCallback != null) update3DCallback.run();
+            }
+        }
 
 
         public void draw() {

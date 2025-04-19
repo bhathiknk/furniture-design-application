@@ -18,45 +18,29 @@ public class Furniture3DFactory {
     public static Group createFurniture3D(FurnitureItem item) {
         Group group;
         switch (item.getType().toLowerCase()) {
-            case "chair":
-                group = createChair(item, new Group());
-                break;
-            case "table":
-                group = createTable(item, new Group());
-                break;
-            case "bed":
-                group = createBed(item, new Group());
-                break;
-            case "sofa":
-                group = createSofa(item, new Group());
-                break;
-            case "bookshelf":
-                group = createBookshelf(item, new Group());
-                break;
-            case "wardrobe":
-                group = createWardrobe(item, new Group());
-                break;
-            case "dining table":
-                group = createDiningTable(item, new Group());
-                break;
-            case "lamp":
-                group = createLamp(item, new Group());
-                break;
-            case "tv stand":
-                group = createTVStand(item, new Group());
-                break;
-            case "coffee table":
-                group = createCoffeeTable(item, new Group());
-                break;
-            default:
-                group = new Group();
-                break;
+            case "chair":        group = createChair(item, new Group()); break;
+            case "table":        group = createTable(item, new Group()); break;
+            case "bed":          group = createBed(item, new Group()); break;
+            case "sofa":         group = createSofa(item, new Group()); break;
+            case "bookshelf":    group = createBookshelf(item, new Group()); break;
+            case "wardrobe":     group = createWardrobe(item, new Group()); break;
+            case "dining table": group = createDiningTable(item, new Group()); break;
+            case "lamp":         group = createLamp(item, new Group()); break;
+            case "tv stand":     group = createTVStand(item, new Group()); break;
+            case "coffee table": group = createCoffeeTable(item, new Group()); break;
+            default:             group = new Group(); break;
         }
-        // Compute pivot using the furniture's center (using the item values as defined in creation methods)
-        double pivotX = item.getX() + item.getWidth() / 2.0;
+        // pivot at centre of item
+        double pivotX = item.getX() + item.getWidth()  / 2.0;
         double pivotZ = item.getY() + item.getHeight() / 2.0;
-        // Apply rotation transform based on the item's rotation (around Y axis), using computed pivot
-        group.getTransforms().add(new Rotate(item.getRotation(), pivotX, 0, pivotZ, new Point3D(0, 1, 0)));
+        // **invert** rotation so 3D matches your 2D direction
+        group.getTransforms().add(
+                new Rotate(
+                        -item.getRotation(),           // <- NEGATED here
+                        pivotX, 0, pivotZ,
+                        new Point3D(0, 1, 0)
+                )
+        );
         return group;
     }
 
@@ -66,10 +50,8 @@ public class Furniture3DFactory {
         gc.setFill(Color.BURLYWOOD);
         gc.fillRect(0, 0, 64, 64);
         gc.setStroke(Color.SADDLEBROWN);
-        for (int i = 0; i < 64; i += 8)
-            gc.strokeLine(i, 0, i, 64);
+        for (int i = 0; i < 64; i += 8) gc.strokeLine(i, 0, i, 64);
         WritableImage img = canvas.snapshot(null, null);
-
         PhongMaterial mat = new PhongMaterial();
         mat.setDiffuseMap(img);
         mat.setSpecularColor(Color.LIGHTGRAY);
@@ -85,57 +67,50 @@ public class Furniture3DFactory {
     }
 
     private static Group createChair(FurnitureItem item, Group group) {
-        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double x = item.getX(), y = item.getY(),
+                w = item.getWidth(), d = item.getHeight();
         double legH = 40, seatH = 6, backH = 30;
-
         PhongMaterial seatMat = smoothMaterial(item.getPrimaryColor());
-        PhongMaterial legMat = woodMaterial();
+        PhongMaterial legMat  = woodMaterial();
         PhongMaterial backMat = smoothMaterial(item.getSecondaryColor());
-
-        // Seat box
+        // seat
         Box seat = new Box(w - 6, seatH, d - 6);
         seat.setMaterial(seatMat);
-        seat.getTransforms().add(new Translate(x + w / 2, legH + seatH / 2, y + d / 2));
+        seat.getTransforms().add(new Translate(x + w/2, legH + seatH/2, y + d/2));
         group.getChildren().add(seat);
-
-        // Legs
-        double[][] legPositions = { {3, 3}, {w - 6, 3}, {3, d - 6}, {w - 6, d - 6} };
-        for (double[] pos : legPositions) {
+        // legs
+        double[][] legs = {{3,3},{w-6,3},{3,d-6},{w-6,d-6}};
+        for (double[] p : legs) {
             Cylinder leg = new Cylinder(2, legH);
             leg.setMaterial(legMat);
-            leg.getTransforms().add(new Translate(x + pos[0] + 2, legH / 2, y + pos[1] + 2));
+            leg.getTransforms().add(new Translate(x + p[0]+2, legH/2, y + p[1]+2));
             group.getChildren().add(leg);
         }
-
-        // Backrest box
+        // backrest
         Box back = new Box(w - 6, backH, 2);
         back.setMaterial(backMat);
-        back.getTransforms().add(new Translate(x + w / 2, legH + seatH + backH / 2, y + 4));
+        back.getTransforms().add(new Translate(x + w/2, legH + seatH + backH/2, y + 4));
         group.getChildren().add(back);
-
         return group;
     }
 
     private static Group createTable(FurnitureItem item, Group group) {
-        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight();
+        double x = item.getX(), y = item.getY(),
+                w = item.getWidth(), d = item.getHeight();
         double topH = 6, legH = 48;
-
         PhongMaterial topMat = smoothMaterial(item.getPrimaryColor());
         PhongMaterial legMat = woodMaterial();
-
         Box top = new Box(w, topH, d);
         top.setMaterial(topMat);
-        top.getTransforms().add(new Translate(x + w / 2, legH + topH / 2, y + d / 2));
+        top.getTransforms().add(new Translate(x + w/2, legH + topH/2, y + d/2));
         group.getChildren().add(top);
-
-        double[][] legOffsets = { {4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4} };
-        for (double[] pos : legOffsets) {
+        double[][] offs = {{4,4},{w-4,4},{4,d-4},{w-4,d-4}};
+        for (double[] p : offs) {
             Cylinder leg = new Cylinder(3, legH);
             leg.setMaterial(legMat);
-            leg.getTransforms().add(new Translate(x + pos[0], legH / 2, y + pos[1]));
+            leg.getTransforms().add(new Translate(x + p[0], legH/2, y + p[1]));
             group.getChildren().add(leg);
         }
-
         return group;
     }
 
@@ -319,17 +294,19 @@ public class Furniture3DFactory {
     }
 
     private static Group createCoffeeTable(FurnitureItem item, Group group) {
-        double x = item.getX(), y = item.getY(), w = item.getWidth(), d = item.getHeight(), h = 25;
+        double x = item.getX(), y = item.getY(),
+                w = item.getWidth(), d = item.getHeight(), h = 25;
         PhongMaterial topMat = smoothMaterial(item.getPrimaryColor());
         PhongMaterial legMat = woodMaterial();
         Box top = new Box(w, 4, d);
         top.setMaterial(topMat);
-        top.getTransforms().add(new Translate(x + w / 2, h, y + d / 2));
+        top.getTransforms().add(new Translate(x + w/2, h, y + d/2));
         group.getChildren().add(top);
-        for (double[] pos : new double[][]{{4, 4}, {w - 4, 4}, {4, d - 4}, {w - 4, d - 4}}) {
+        double[][] legs = {{4,4},{w-4,4},{4,d-4},{w-4,d-4}};
+        for (double[] p : legs) {
             Cylinder leg = new Cylinder(2.5, h);
             leg.setMaterial(legMat);
-            leg.getTransforms().add(new Translate(x + pos[0], h / 2, y + pos[1]));
+            leg.getTransforms().add(new Translate(x + p[0], h/2, y + p[1]));
             group.getChildren().add(leg);
         }
         return group;
