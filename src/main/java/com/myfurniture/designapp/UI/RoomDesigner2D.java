@@ -9,6 +9,7 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
@@ -24,144 +25,143 @@ public class RoomDesigner2D extends BorderPane {
     private RoomDesign currentRoomDesign;
     private DesignerCanvas canvas;
     private VBox palettePanel;
-    private Color chosenPrimary = Color.ORANGE;
+    private Color chosenPrimary   = Color.ORANGE;
     private Color chosenSecondary = Color.DARKGRAY;
     private Runnable update3DCallback;
-    private TextField txtRoomWidth;
-    private TextField txtRoomHeight;
+    private TextField txtRoomWidth, txtRoomHeight;
 
     public RoomDesigner2D(DesignManager designManager, Runnable update3DCallback) {
-        this.designManager = designManager;
+        this.designManager    = designManager;
         this.update3DCallback = update3DCallback;
-        currentRoomDesign = new RoomDesign(800, 600, Color.LIGHTGRAY);
+        currentRoomDesign     = new RoomDesign(800, 600, Color.LIGHTGRAY);
         designManager.setCurrentDesign(currentRoomDesign);
         initUI();
     }
+
     private void initUI() {
-        // Left panel container
+        // Sidebar
         palettePanel = new VBox(20);
         palettePanel.setPadding(new Insets(20));
         palettePanel.setPrefWidth(300);
         palettePanel.setStyle(
                 "-fx-background-color: #061fc1;" +
-                        "-fx-border-color: #061fc1;" +
+                        "-fx-border-color: #34495e;" +
                         "-fx-border-width: 0 2 0 0;"
         );
 
-        // ROOM SETTINGS
-        txtRoomWidth = new TextField(String.valueOf(currentRoomDesign.getRoomWidth()));
+        // Room settings
+        txtRoomWidth  = new TextField(String.valueOf(currentRoomDesign.getRoomWidth()));
         txtRoomHeight = new TextField(String.valueOf(currentRoomDesign.getRoomHeight()));
-        VBox roomSettingsBox = new VBox(8,
+        VBox roomBox = new VBox(8,
                 new Label("Width:"), txtRoomWidth,
                 new Label("Height:"), txtRoomHeight
         );
-        styleSection(roomSettingsBox);
-        Button btnRoomColor = styledButton("Room Color");
-        btnRoomColor.setOnAction(e -> {
+        styleCard(roomBox);
+        Button roomColor = styledButton("Pick Room Color");
+        roomColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(currentRoomDesign.getRoomColor());
             if (c != null) {
                 currentRoomDesign.setRoomColor(c);
-                canvas.draw(); notify3D();
+                refreshAll();
             }
         });
-        Button btnApplyRoom = styledButton("Apply");
-        btnApplyRoom.setOnAction(e -> applyRoomSettings());
-        VBox roomControls = new VBox(10, roomSettingsBox, btnRoomColor, btnApplyRoom);
-        TitledPane roomPane = titledPane("Room Settings", roomControls);
+        Button applyRoom = styledButton("Apply Size");
+        applyRoom.setOnAction(e -> applyRoomSettings());
+        TitledPane roomPane = styledTitledPane("Room Settings",
+                new VBox(10, roomBox, roomColor, applyRoom)
+        );
 
-        // COLORS
-        Button btnPrimaryColor = styledButton("Primary Color");
-        btnPrimaryColor.setOnAction(e -> {
+        // Furniture colors
+        Button primaryColor = styledButton("Primary Color");
+        primaryColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(chosenPrimary);
             if (c != null) chosenPrimary = c;
         });
-        Button btnSecondaryColor = styledButton("Secondary Color");
-        btnSecondaryColor.setOnAction(e -> {
+        Button secondaryColor = styledButton("Secondary Color");
+        secondaryColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(chosenSecondary);
             if (c != null) chosenSecondary = c;
         });
-        VBox colorBox = new VBox(10, btnPrimaryColor, btnSecondaryColor);
-        TitledPane colorPane = titledPane("Furniture Colors", colorBox);
+        TitledPane colorPane = styledTitledPane("Furniture Colors",
+                new VBox(10, primaryColor, secondaryColor)
+        );
 
-        // WALL COLORS
-        Button btnBackWall = styledButton("Back Wall");
-        btnBackWall.setOnAction(e -> {
-            Color c = ColorPickerDialog.showDialog(currentRoomDesign.getBackWallColor());
-            if (c != null) { currentRoomDesign.setBackWallColor(c); notify3D(); }
-        });
-        Button btnLeftWall = styledButton("Left Wall");
-        btnLeftWall.setOnAction(e -> {
-            Color c = ColorPickerDialog.showDialog(currentRoomDesign.getLeftWallColor());
-            if (c != null) { currentRoomDesign.setLeftWallColor(c); notify3D(); }
-        });
-        Button btnRightWall = styledButton("Right Wall");
-        btnRightWall.setOnAction(e -> {
-            Color c = ColorPickerDialog.showDialog(currentRoomDesign.getRightWallColor());
-            if (c != null) { currentRoomDesign.setRightWallColor(c); notify3D(); }
-        });
-        VBox wallBox = new VBox(10, btnBackWall, btnLeftWall, btnRightWall);
-        TitledPane wallPane = titledPane("Wall Colors", wallBox);
+        // Wall colors
+        Button backWall = styledButton("Back Wall");
+        backWall.setOnAction(e -> pickWallColor("back"));
+        Button leftWall = styledButton("Left Wall");
+        leftWall.setOnAction(e -> pickWallColor("left"));
+        Button rightWall = styledButton("Right Wall");
+        rightWall.setOnAction(e -> pickWallColor("right"));
+        TitledPane wallPane = styledTitledPane("Wall Colors",
+                new VBox(10, backWall, leftWall, rightWall)
+        );
 
-        // FURNITURE LIST WITH SCROLL
-        FlowPane furnitureButtons = new FlowPane(10, 10);
-        furnitureButtons.setPrefWidth(260);
-        String[] furnitureTypes = {
+        // Furniture list
+        FlowPane flow = new FlowPane(10, 10);
+        flow.setPrefWidth(260);
+        String[] types = {
                 "Chair","Table","Bed","Sofa","Bookshelf",
                 "Wardrobe","Dining Table","Lamp","TV Stand","Coffee Table"
         };
-        for (String type : furnitureTypes) {
-            Button btn = styledButton(type);
-            btn.setPrefWidth(120);
-            btn.setOnAction(e -> addFurniture(type));
-            furnitureButtons.getChildren().add(btn);
+        for (String t : types) {
+            Button b = styledButton(t);
+            b.setPrefWidth(120);
+            b.setOnAction(e -> addFurniture(t));
+            flow.getChildren().add(b);
         }
-        ScrollPane furnitureScroll = new ScrollPane(furnitureButtons);
-        furnitureScroll.setFitToWidth(true);
-        furnitureScroll.setPrefHeight(200);
-        VBox furnitureBox = new VBox(10, furnitureScroll);
-        TitledPane furniturePane = titledPane("Add Furniture", furnitureBox);
+        ScrollPane listScroll = new ScrollPane(flow);
+        listScroll.setFitToWidth(true);
+        listScroll.setPrefHeight(180);
+        TitledPane furniturePane = styledTitledPane("Add Furniture", listScroll);
 
-        // ACTIONS & TRANSFORM
-        Button btnSave = styledButton("Save Design");
-        btnSave.setOnAction(e -> saveDesign());
-        Button btnLoad = styledButton("Load Design");
-        btnLoad.setOnAction(e -> loadDesign());
-        Button btnDelete = styledButton("Delete Selected");
-        btnDelete.setOnAction(e -> { if (canvas.deleteSelected()) notify3D(); });
+        // Actions
+        Button save = styledButton("Save Design");
+        save.setOnAction(e -> saveDesign());
+        Button load = styledButton("Load Design");
+        load.setOnAction(e -> loadDesign());
+        Button del = styledButton("Delete Selected");
+        del.setOnAction(e -> {
+            if (canvas.deleteSelected()) refreshAll();
+        });
+        Button inc = styledButton("Size +");
+        inc.setOnAction(e -> { canvas.adjustSize(true); refreshAll(); });
+        Button dec = styledButton("Size -");
+        dec.setOnAction(e -> { canvas.adjustSize(false); refreshAll(); });
+        Button rot = styledButton("Rotate");
+        rot.setOnAction(e -> { canvas.rotateSelected(90); refreshAll(); });
+        VBox actionBox = new VBox(10, save, load, del, new Separator(), inc, dec, rot);
+        styleCard(actionBox);
 
-        Button btnInc = styledButton("Size +");
-        btnInc.setOnAction(e -> canvas.adjustSize(true));
-        Button btnDec = styledButton("Size -");
-        btnDec.setOnAction(e -> canvas.adjustSize(false));
-        Button btnRot = styledButton("Rotate");
-        btnRot.setOnAction(e -> canvas.rotateSelected(90));
-
-        VBox actionBox = new VBox(10,
-                btnSave, btnLoad, btnDelete,
-                new Separator(), btnInc, btnDec, btnRot
-        );
-        styleSection(actionBox);
-
-        // assemble
         palettePanel.getChildren().addAll(
                 roomPane, colorPane, wallPane, furniturePane, actionBox
         );
 
-        // --- 2D Canvas Center ---
+        // Main canvas
         canvas = new DesignerCanvas(currentRoomDesign);
-        StackPane canvasWrapper = new StackPane(canvas);
-        canvasWrapper.setStyle("-fx-background-color: white;");
-        canvasWrapper.setAlignment(Pos.CENTER);
-        canvasWrapper.widthProperty().addListener((o,__,___)-> canvas.draw());
-        canvasWrapper.heightProperty().addListener((o,__,___)-> canvas.draw());
+        StackPane canvasHolder = new StackPane(canvas);
+        canvasHolder.setStyle(
+                "-fx-background-color: #ecf0f1;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-padding: 8;"
+        );
+        canvasHolder.setEffect(new DropShadow(10, Color.gray(0, 0.25)));
+        canvasHolder.setAlignment(Pos.CENTER);
+        canvasHolder.widthProperty().addListener((o,__,___)-> canvas.draw());
+        canvasHolder.heightProperty().addListener((o,__,___)-> canvas.draw());
 
         setLeft(palettePanel);
-        setCenter(canvasWrapper);
+        setCenter(canvasHolder);
     }
 
-    private void styleSection(Region r) {
-        r.setPadding(new Insets(8));
-        r.setStyle("-fx-background-color: white; -fx-background-radius: 4;");
+    private void styleCard(Region r) {
+        r.setPadding(new Insets(10));
+        r.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 6;" +
+                        "-fx-border-color: #dcdcdc;" +
+                        "-fx-border-radius: 6;"
+        );
     }
 
     private Button styledButton(String text) {
@@ -170,29 +170,50 @@ public class RoomDesigner2D extends BorderPane {
         b.setStyle(
                 "-fx-background-color: #3498db;" +
                         "-fx-text-fill: white;" +
-                        "-fx-background-radius: 4;" +
-                        "-fx-font-size: 12;"
+                        "-fx-background-radius: 6;" +
+                        "-fx-font-size: 13;"
         );
         return b;
     }
 
-    private TitledPane titledPane(String title, Region content) {
+    private TitledPane styledTitledPane(String title, Region content) {
         TitledPane tp = new TitledPane(title, content);
         tp.setExpanded(false);
         tp.setAnimated(true);
+        // Apply header and content styles
         tp.setStyle(
-                "-fx-text-fill: black;" +
-                        "-fx-font-weight: bold;"
+                "-fx-font-size: 14;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: black;" +
+                        "-fx-background-color: #2980b9;"
         );
-        tp.getContent().setStyle("-fx-background-color: #ecf0f1;");
+        content.setStyle(
+                "-fx-background-color: #ecf0f1;" +
+                        "-fx-padding: 8;" +
+                        "-fx-background-radius: 6;"
+        );
         return tp;
     }
 
-    private void notify3D() {
+    private void pickWallColor(String which) {
+        Color current = "back".equals(which)
+                ? currentRoomDesign.getBackWallColor()
+                : "left".equals(which)
+                ? currentRoomDesign.getLeftWallColor()
+                : currentRoomDesign.getRightWallColor();
+        Color c = ColorPickerDialog.showDialog(current);
+        if (c != null) {
+            if ("back".equals(which))  currentRoomDesign.setBackWallColor(c);
+            if ("left".equals(which))  currentRoomDesign.setLeftWallColor(c);
+            if ("right".equals(which)) currentRoomDesign.setRightWallColor(c);
+            refreshAll();
+        }
+    }
+
+    private void refreshAll() {
         canvas.draw();
         if (update3DCallback != null) update3DCallback.run();
     }
-
 
     private void applyRoomSettings() {
         try {
@@ -202,8 +223,7 @@ public class RoomDesigner2D extends BorderPane {
             currentRoomDesign.setRoomHeight(h);
             canvas.setWidth(w);
             canvas.setHeight(h);
-            canvas.draw();
-            if (update3DCallback != null) update3DCallback.run();
+            refreshAll();
         } catch (NumberFormatException ex) {
             showAlert("Please enter valid integers for width and height.");
         }
