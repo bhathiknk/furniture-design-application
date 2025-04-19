@@ -1,4 +1,4 @@
-package com.myfurniture.designapp.UI;
+package com.myfurniture.designapp.Factory;
 
 import com.myfurniture.designapp.Core.FurnitureItem;
 import javafx.scene.canvas.GraphicsContext;
@@ -12,7 +12,7 @@ import javafx.scene.paint.Color;
  * - Secondary-color accents for key parts
  * - Black outline (or red when selected)
  */
-public class Furniture2DRenderer {
+public class Furniture2DFactory {
 
     public static void drawFurniture(GraphicsContext g,
                                      FurnitureItem it,

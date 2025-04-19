@@ -1,5 +1,5 @@
 package com.myfurniture.designapp.UI;
-import com.myfurniture.designapp.UI.Furniture2DRenderer;
+import com.myfurniture.designapp.Factory.Furniture2DFactory;
 import com.myfurniture.designapp.Core.DesignManager;
 import com.myfurniture.designapp.Core.FurnitureItem;
 import com.myfurniture.designapp.Core.RoomDesign;
@@ -37,149 +37,162 @@ public class RoomDesigner2D extends BorderPane {
         designManager.setCurrentDesign(currentRoomDesign);
         initUI();
     }
-
     private void initUI() {
-        palettePanel = new VBox(15);
-        palettePanel.setPadding(new Insets(15));
+        // Left panel container
+        palettePanel = new VBox(20);
+        palettePanel.setPadding(new Insets(20));
         palettePanel.setPrefWidth(300);
-        palettePanel.setStyle("-fx-background-color: #f8f8f8;");
-
-        // --- Room Settings Pane ---
-        VBox roomSettingsBox = new VBox(10,
-                new Label("Room Width:"), txtRoomWidth = new TextField(String.valueOf(currentRoomDesign.getRoomWidth())),
-                new Label("Room Height:"), txtRoomHeight = new TextField(String.valueOf(currentRoomDesign.getRoomHeight()))
+        palettePanel.setStyle(
+                "-fx-background-color: #061fc1;" +
+                        "-fx-border-color: #061fc1;" +
+                        "-fx-border-width: 0 2 0 0;"
         );
-        Button btnRoomColor = new Button("Select Room Color");
-        btnRoomColor.setMaxWidth(Double.MAX_VALUE);
+
+        // ROOM SETTINGS
+        txtRoomWidth = new TextField(String.valueOf(currentRoomDesign.getRoomWidth()));
+        txtRoomHeight = new TextField(String.valueOf(currentRoomDesign.getRoomHeight()));
+        VBox roomSettingsBox = new VBox(8,
+                new Label("Width:"), txtRoomWidth,
+                new Label("Height:"), txtRoomHeight
+        );
+        styleSection(roomSettingsBox);
+        Button btnRoomColor = styledButton("Room Color");
         btnRoomColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(currentRoomDesign.getRoomColor());
             if (c != null) {
                 currentRoomDesign.setRoomColor(c);
-                canvas.draw();
-                if (update3DCallback != null) update3DCallback.run();
+                canvas.draw(); notify3D();
             }
         });
-        Button btnApplyRoom = new Button("Apply Settings");
-        btnApplyRoom.setMaxWidth(Double.MAX_VALUE);
+        Button btnApplyRoom = styledButton("Apply");
         btnApplyRoom.setOnAction(e -> applyRoomSettings());
-        TitledPane roomPane = new TitledPane("Room Settings",
-                new VBox(10, roomSettingsBox, btnRoomColor, btnApplyRoom));
-        roomPane.setExpanded(true);
+        VBox roomControls = new VBox(10, roomSettingsBox, btnRoomColor, btnApplyRoom);
+        TitledPane roomPane = titledPane("Room Settings", roomControls);
 
-        // --- Furniture Color Pane ---
-        Button btnPrimaryColor = new Button("Select Primary Color");
-        btnPrimaryColor.setMaxWidth(Double.MAX_VALUE);
+        // COLORS
+        Button btnPrimaryColor = styledButton("Primary Color");
         btnPrimaryColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(chosenPrimary);
             if (c != null) chosenPrimary = c;
         });
-        Button btnSecondaryColor = new Button("Select Secondary Color");
-        btnSecondaryColor.setMaxWidth(Double.MAX_VALUE);
+        Button btnSecondaryColor = styledButton("Secondary Color");
         btnSecondaryColor.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(chosenSecondary);
             if (c != null) chosenSecondary = c;
         });
-        TitledPane colorPane = new TitledPane("Furniture Colors",
-                new VBox(10, btnPrimaryColor, btnSecondaryColor));
-        colorPane.setExpanded(false);
+        VBox colorBox = new VBox(10, btnPrimaryColor, btnSecondaryColor);
+        TitledPane colorPane = titledPane("Furniture Colors", colorBox);
 
-        // --- Wall Color Pane ---
-        Button btnBackWallColor = new Button("Back Wall Color");
-        btnBackWallColor.setMaxWidth(Double.MAX_VALUE);
-        btnBackWallColor.setOnAction(e -> {
+        // WALL COLORS
+        Button btnBackWall = styledButton("Back Wall");
+        btnBackWall.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(currentRoomDesign.getBackWallColor());
-            if (c != null) {
-                currentRoomDesign.setBackWallColor(c);
-                if (update3DCallback != null) update3DCallback.run();
-            }
+            if (c != null) { currentRoomDesign.setBackWallColor(c); notify3D(); }
         });
-        Button btnLeftWallColor = new Button("Left Wall Color");
-        btnLeftWallColor.setMaxWidth(Double.MAX_VALUE);
-        btnLeftWallColor.setOnAction(e -> {
+        Button btnLeftWall = styledButton("Left Wall");
+        btnLeftWall.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(currentRoomDesign.getLeftWallColor());
-            if (c != null) {
-                currentRoomDesign.setLeftWallColor(c);
-                if (update3DCallback != null) update3DCallback.run();
-            }
+            if (c != null) { currentRoomDesign.setLeftWallColor(c); notify3D(); }
         });
-        Button btnRightWallColor = new Button("Right Wall Color");
-        btnRightWallColor.setMaxWidth(Double.MAX_VALUE);
-        btnRightWallColor.setOnAction(e -> {
+        Button btnRightWall = styledButton("Right Wall");
+        btnRightWall.setOnAction(e -> {
             Color c = ColorPickerDialog.showDialog(currentRoomDesign.getRightWallColor());
-            if (c != null) {
-                currentRoomDesign.setRightWallColor(c);
-                if (update3DCallback != null) update3DCallback.run();
-            }
+            if (c != null) { currentRoomDesign.setRightWallColor(c); notify3D(); }
         });
-        TitledPane wallColorPane = new TitledPane("Wall Colors",
-                new VBox(10, btnBackWallColor, btnLeftWallColor, btnRightWallColor));
-        wallColorPane.setExpanded(false);
+        VBox wallBox = new VBox(10, btnBackWall, btnLeftWall, btnRightWall);
+        TitledPane wallPane = titledPane("Wall Colors", wallBox);
 
-        // --- Add Furniture Pane ---
+        // FURNITURE LIST WITH SCROLL
         FlowPane furnitureButtons = new FlowPane(10, 10);
-        furnitureButtons.setPrefWrapLength(260);
+        furnitureButtons.setPrefWidth(260);
         String[] furnitureTypes = {
                 "Chair","Table","Bed","Sofa","Bookshelf",
                 "Wardrobe","Dining Table","Lamp","TV Stand","Coffee Table"
         };
         for (String type : furnitureTypes) {
-            Button btn = new Button(type);
-            btn.setOnAction(e -> addFurniture(type));
+            Button btn = styledButton(type);
             btn.setPrefWidth(120);
+            btn.setOnAction(e -> addFurniture(type));
             furnitureButtons.getChildren().add(btn);
         }
-        TitledPane furniturePane = new TitledPane("Add Furniture", furnitureButtons);
-        furniturePane.setExpanded(true);
+        ScrollPane furnitureScroll = new ScrollPane(furnitureButtons);
+        furnitureScroll.setFitToWidth(true);
+        furnitureScroll.setPrefHeight(200);
+        VBox furnitureBox = new VBox(10, furnitureScroll);
+        TitledPane furniturePane = titledPane("Add Furniture", furnitureBox);
 
-        // --- Save / Load / Delete Controls ---
-        Button btnSave = new Button("Save Design...");
-        btnSave.setMaxWidth(Double.MAX_VALUE);
+        // ACTIONS & TRANSFORM
+        Button btnSave = styledButton("Save Design");
         btnSave.setOnAction(e -> saveDesign());
-
-        Button btnLoad = new Button("Load Design...");
-        btnLoad.setMaxWidth(Double.MAX_VALUE);
+        Button btnLoad = styledButton("Load Design");
         btnLoad.setOnAction(e -> loadDesign());
+        Button btnDelete = styledButton("Delete Selected");
+        btnDelete.setOnAction(e -> { if (canvas.deleteSelected()) notify3D(); });
 
-        Button btnDelete = new Button("Delete Selected");
-        btnDelete.setMaxWidth(Double.MAX_VALUE);
-        btnDelete.setOnAction(e -> {
-            if (canvas.deleteSelected()) {
-                if (update3DCallback != null) update3DCallback.run();
-            }
-        });
+        Button btnInc = styledButton("Size +");
+        btnInc.setOnAction(e -> canvas.adjustSize(true));
+        Button btnDec = styledButton("Size -");
+        btnDec.setOnAction(e -> canvas.adjustSize(false));
+        Button btnRot = styledButton("Rotate");
+        btnRot.setOnAction(e -> canvas.rotateSelected(90));
 
-        VBox actionBox = new VBox(10, btnSave, btnLoad, btnDelete);
+        VBox actionBox = new VBox(10,
+                btnSave, btnLoad, btnDelete,
+                new Separator(), btnInc, btnDec, btnRot
+        );
+        styleSection(actionBox);
 
-        // --- Size & Rotate ---
-        Button btnIncreaseSize = new Button("Increase Size");
-        btnIncreaseSize.setMaxWidth(Double.MAX_VALUE);
-        btnIncreaseSize.setOnAction(e -> canvas.adjustSize(true));
-        Button btnDecreaseSize = new Button("Decrease Size");
-        btnDecreaseSize.setMaxWidth(Double.MAX_VALUE);
-        btnDecreaseSize.setOnAction(e -> canvas.adjustSize(false));
-        Button btnRotateSelected = new Button("Rotate Selected");
-        btnRotateSelected.setMaxWidth(Double.MAX_VALUE);
-        btnRotateSelected.setOnAction(e -> canvas.rotateSelected(90));
-        TitledPane sizePane = new TitledPane("Adjust Size & Rotate",
-                new VBox(10, btnIncreaseSize, btnDecreaseSize, btnRotateSelected));
-        sizePane.setExpanded(false);
-
-        // --- Assemble Left Panel ---
+        // assemble
         palettePanel.getChildren().addAll(
-                roomPane, colorPane, wallColorPane, furniturePane, sizePane, actionBox
+                roomPane, colorPane, wallPane, furniturePane, actionBox
         );
 
-        // --- 2D Canvas Wrapper ---
+        // --- 2D Canvas Center ---
         canvas = new DesignerCanvas(currentRoomDesign);
         StackPane canvasWrapper = new StackPane(canvas);
         canvasWrapper.setStyle("-fx-background-color: white;");
         canvasWrapper.setAlignment(Pos.CENTER);
-        canvasWrapper.widthProperty().addListener((o,old,newW)->canvas.draw());
-        canvasWrapper.heightProperty().addListener((o,old,newH)->canvas.draw());
+        canvasWrapper.widthProperty().addListener((o,__,___)-> canvas.draw());
+        canvasWrapper.heightProperty().addListener((o,__,___)-> canvas.draw());
 
         setLeft(palettePanel);
         setCenter(canvasWrapper);
     }
+
+    private void styleSection(Region r) {
+        r.setPadding(new Insets(8));
+        r.setStyle("-fx-background-color: white; -fx-background-radius: 4;");
+    }
+
+    private Button styledButton(String text) {
+        Button b = new Button(text);
+        b.setMaxWidth(Double.MAX_VALUE);
+        b.setStyle(
+                "-fx-background-color: #3498db;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-size: 12;"
+        );
+        return b;
+    }
+
+    private TitledPane titledPane(String title, Region content) {
+        TitledPane tp = new TitledPane(title, content);
+        tp.setExpanded(false);
+        tp.setAnimated(true);
+        tp.setStyle(
+                "-fx-text-fill: black;" +
+                        "-fx-font-weight: bold;"
+        );
+        tp.getContent().setStyle("-fx-background-color: #ecf0f1;");
+        return tp;
+    }
+
+    private void notify3D() {
+        canvas.draw();
+        if (update3DCallback != null) update3DCallback.run();
+    }
+
 
     private void applyRoomSettings() {
         try {
@@ -406,7 +419,7 @@ public class RoomDesigner2D extends BorderPane {
                 gc.rotate(it.getRotation());
                 gc.translate(-it.getWidth() / 2.0, -it.getHeight() / 2.0);
 
-                Furniture2DRenderer.drawFurniture(gc, it, isSel);
+                Furniture2DFactory.drawFurniture(gc, it, isSel);
 
                 gc.restore();
             }
