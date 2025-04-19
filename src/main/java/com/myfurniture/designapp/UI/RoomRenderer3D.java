@@ -1,3 +1,4 @@
+// src/main/java/com/myfurniture/designapp/UI/RoomRenderer3D.java
 package com.myfurniture.designapp.UI;
 
 import com.myfurniture.designapp.Core.DesignManager;
@@ -17,19 +18,17 @@ import javafx.scene.transform.Translate;
 
 /**
  * Renders the current {@link RoomDesign} in 3‑D.
- * – Room is always centred on screen with smooth orbiting.
- * – Zoom in/out with mouse scroll.
- * – Click‑drag to rotate from front-facing perspective.
+ * Room dimensions (width/depth) drive the shape, so selecting “Square”
+ * in 2D (which forces roomHeight == roomWidth) automatically shows a cube.
  */
 public class RoomRenderer3D extends StackPane {
 
     private final DesignManager designManager;
+    private final Group contentGroup = new Group();
+    private final Group pivotGroup   = new Group(contentGroup);
+    private final Group root3D       = new Group(pivotGroup);
 
-    private final Group contentGroup = new Group(); // Holds booth + furniture
-    private final Group pivotGroup   = new Group(contentGroup); // Rotated group
-    private final Group root3D       = new Group(pivotGroup);   // Full root
-
-    private final Rotate rotateX = new Rotate(-30, Rotate.X_AXIS); // slight tilt down
+    private final Rotate rotateX = new Rotate(-30, Rotate.X_AXIS);
     private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
 
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -39,7 +38,6 @@ public class RoomRenderer3D extends StackPane {
 
     private double anchorX, anchorY;
     private double anchorAngleX, anchorAngleY;
-
     private static final double FIT_W = 600;
     private static final double FIT_D = 400;
 
@@ -66,8 +64,8 @@ public class RoomRenderer3D extends StackPane {
         setOnMouseDragged(this::onMouseDragged);
         addEventHandler(ScrollEvent.SCROLL, this::onScroll);
 
-        widthProperty().addListener((o, oldVal, newVal) -> rebuild());
-        heightProperty().addListener((o, oldVal, newVal) -> rebuild());
+        widthProperty().addListener((o, __, ___) -> rebuild());
+        heightProperty().addListener((o, __, ___) -> rebuild());
 
         rebuild();
     }
@@ -91,8 +89,8 @@ public class RoomRenderer3D extends StackPane {
         updateCameraPosition();
     }
 
-    private static double clamp(double val, double min, double max) {
-        return Math.max(min, Math.min(max, val));
+    private static double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
     }
 
     private void rebuild() {
@@ -101,34 +99,34 @@ public class RoomRenderer3D extends StackPane {
         RoomDesign room = designManager.getCurrentDesign();
         if (room == null) return;
 
-        // Add booth and furniture
+        // Booth floor + walls
         contentGroup.getChildren().add(BoothRoomFactory.createBooth(room));
+
+        // Furniture
         for (FurnitureItem item : room.getFurniture()) {
             contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
-        // Fit scale
+        // Scale to fit
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
-        contentGroup.getTransforms().clear();
-        contentGroup.getTransforms().add(new Scale(scaleFactor, scaleFactor, scaleFactor));
 
-        // Flip to make floor downward-facing
-        contentGroup.getTransforms().add(new Rotate(180, Rotate.X_AXIS));
+        contentGroup.getTransforms().setAll(
+                new Scale(scaleFactor, scaleFactor, scaleFactor),
+                new Rotate(180, Rotate.X_AXIS)  // flip so floor faces down
+        );
 
-        // Compute bounds and center it
-        Bounds bounds = contentGroup.getBoundsInParent();
-        double cX = (bounds.getMinX() + bounds.getMaxX()) / 2.0;
-        double cY = (bounds.getMinY() + bounds.getMaxY()) / 2.0;
-        double cZ = (bounds.getMinZ() + bounds.getMaxZ()) / 2.0;
-
+        // Center
+        Bounds b = contentGroup.getBoundsInParent();
+        double cX = (b.getMinX() + b.getMaxX()) / 2;
+        double cY = (b.getMinY() + b.getMaxY()) / 2;
+        double cZ = (b.getMinZ() + b.getMaxZ()) / 2;
         contentGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
 
-        // Set camera
         updateCameraPosition();
 
-        // Lighting
+        // Ambient light once
         if (root3D.getChildren().stream().noneMatch(n -> n instanceof AmbientLight)) {
             root3D.getChildren().add(new AmbientLight(Color.WHITE));
         }
@@ -136,7 +134,7 @@ public class RoomRenderer3D extends StackPane {
 
     private void updateCameraPosition() {
         camera.setTranslateZ(-cameraDistance);
-        camera.setTranslateY(-100); // subtle eye-level elevation
+        camera.setTranslateY(-100);
     }
 
     public void updateScene() {
