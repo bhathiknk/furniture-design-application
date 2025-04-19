@@ -16,7 +16,7 @@ public class BoothRoomFactory {
 
         double width       = room.getRoomWidth();
         double depth       = room.getRoomHeight();
-        double wallHeight  = 150;
+        double wallHeight  = room.getRoomHeight();;
         double wallThickness = 10;
 
         // per‐wall materials
