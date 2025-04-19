@@ -4,157 +4,143 @@ import com.myfurniture.designapp.Core.FurnitureItem;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+/**
+ * Furniture2DRenderer V4
+ * ----------------------
+ * Simple, schematic 2D icons for quick recognition:
+ * - Solid fill for main body
+ * - Secondary-color accents for key parts
+ * - Black outline (or red when selected)
+ */
 public class Furniture2DRenderer {
 
-    /**
-     * Draws a 2D “icon” for the given furniture item.
-     *
-     * @param gc          the GraphicsContext to draw into
-     * @param item        the furniture item
-     * @param isSelected  whether to highlight it
-     */
-    public static void drawFurniture(GraphicsContext gc, FurnitureItem item, boolean isSelected) {
-        double w = item.getWidth(), h = item.getHeight();
-        // draw base shape
-        switch (item.getType().toLowerCase()) {
-            case "chair":
-                drawChair(gc, item);
-                break;
-            case "table":
-            case "dining table":
-                drawTable(gc, item);
-                break;
-            case "bed":
-                drawBed(gc, item);
-                break;
-            case "sofa":
-                drawSofa(gc, item);
-                break;
-            case "bookshelf":
-                drawBookshelf(gc, item);
-                break;
-            case "wardrobe":
-                drawWardrobe(gc, item);
-                break;
-            case "lamp":
-                drawLamp(gc, item);
-                break;
-            case "tv stand":
-                drawTVStand(gc, item);
-                break;
-            case "coffee table":
-                drawCoffeeTable(gc, item);
-                break;
-            default:
-                // fallback to simple rectangle
-                gc.setFill(item.getPrimaryColor());
-                gc.fillRect(0, 0, w, h);
+    public static void drawFurniture(GraphicsContext g,
+                                     FurnitureItem it,
+                                     boolean selected) {
+
+        double w = it.getWidth();
+        double h = it.getHeight();
+        Color primary   = it.getPrimaryColor();
+        Color secondary = it.getSecondaryColor();
+
+        g.save();
+
+        switch (it.getType().toLowerCase()) {
+            case "chair"        -> drawChair(g, primary, secondary, w, h);
+            case "table", "dining table"
+                    -> drawTable(g, primary, secondary, w, h);
+            case "bed"          -> drawBed(g, primary, secondary, w, h);
+            case "sofa"         -> drawSofa(g, primary, secondary, w, h);
+            case "bookshelf"    -> drawShelf(g, primary, secondary, w, h);
+            case "wardrobe"     -> drawWardrobe(g, primary, secondary, w, h);
+            case "lamp"         -> drawLamp(g, primary, secondary, w, h);
+            case "tv stand"     -> drawTV(g, primary, secondary, w, h);
+            case "coffee table" -> drawCoffee(g, primary, secondary, w, h);
+            default             -> drawDefault(g, primary, w, h);
         }
 
-        // stroke outline
-        gc.setStroke(isSelected ? Color.RED : Color.DARKGRAY);
-        gc.setLineWidth(isSelected ? 3 : 1);
-        gc.strokeRect(0, 0, w, h);
+        // outline
+        g.setStroke(selected ? Color.RED : Color.BLACK);
+        g.setLineWidth(1);
+        g.strokeRect(0, 0, w, h);
+
+        g.restore();
     }
 
-    private static void drawChair(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
+    private static void drawChair(GraphicsContext g, Color p, Color s, double w, double h) {
         // seat
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, h * 0.6, w, h * 0.3);
+        g.setFill(p);
+        g.fillRect(w*0.2, h*0.5, w*0.6, h*0.4);
         // backrest
-        gc.setFill(it.getSecondaryColor());
-        gc.fillRect(0, 0, w, h * 0.4);
+        g.setFill(s);
+        g.fillRect(w*0.2, h*0.2, w*0.6, h*0.2);
     }
 
-    private static void drawTable(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
-        // top
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, 0, w, h * 0.2);
-        // legs
-        gc.setFill(it.getSecondaryColor());
-        double leg = Math.min(w, h) * 0.1;
-        gc.fillRect(0, h - leg, leg, leg);
-        gc.fillRect(w - leg, h - leg, leg, leg);
-        gc.fillRect(0, 0, leg, leg);
-        gc.fillRect(w - leg, 0, leg, leg);
+    private static void drawTable(GraphicsContext g, Color p, Color s, double w, double h) {
+        // tabletop
+        g.setFill(p);
+        g.fillRect(0, 0, w, h*0.2);
+        // legs as small rectangles at corners
+        g.setFill(s);
+        double lw = w*0.1, lh = h*0.3;
+        g.fillRect(0, h*0.2, lw, lh);
+        g.fillRect(w-lw, h*0.2, lw, lh);
+        g.fillRect(0, h*0.5, lw, lh);
+        g.fillRect(w-lw, h*0.5, lw, lh);
     }
 
-    private static void drawBed(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
+    private static void drawBed(GraphicsContext g, Color p, Color s, double w, double h) {
         // mattress
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, 0, w, h * 0.7);
+        g.setFill(p);
+        g.fillRect(0, h*0.2, w, h*0.6);
         // pillows
-        gc.setFill(it.getSecondaryColor());
-        gc.fillOval(w * 0.1, h * 0.7, w * 0.3, h * 0.2);
-        gc.fillOval(w * 0.6, h * 0.7, w * 0.3, h * 0.2);
+        g.setFill(s);
+        g.fillOval(w*0.1, 0, w*0.3, h*0.2);
+        g.fillOval(w*0.6, 0, w*0.3, h*0.2);
     }
 
-    private static void drawSofa(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
-        // seat
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, h * 0.4, w, h * 0.4);
+    private static void drawSofa(GraphicsContext g, Color p, Color s, double w, double h) {
         // back
-        gc.setFill(it.getPrimaryColor().darker());
-        gc.fillRect(0, 0, w, h * 0.4);
+        g.setFill(p);
+        g.fillRect(0, 0, w, h*0.3);
+        // seat
+        g.setFill(p.darker());
+        g.fillRect(0, h*0.3, w, h*0.4);
         // arms
-        gc.setFill(it.getSecondaryColor());
-        gc.fillRect(0, h * 0.4, w * 0.1, h * 0.4);
-        gc.fillRect(w * 0.9, h * 0.4, w * 0.1, h * 0.4);
+        g.setFill(s);
+        g.fillRect(0, h*0.3, w*0.1, h*0.4);
+        g.fillRect(w*0.9, h*0.3, w*0.1, h*0.4);
     }
 
-    private static void drawBookshelf(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, 0, w, h);
-        gc.setStroke(it.getSecondaryColor());
-        for (int i = 1; i < 4; i++) {
-            double y = i * h / 4.0;
-            gc.strokeLine(0, y, w, y);
+    private static void drawShelf(GraphicsContext g, Color p, Color s, double w, double h) {
+        g.setFill(p);
+        g.fillRect(0, 0, w, h);
+        g.setStroke(s.darker());
+        for (int i = 1; i <= 3; i++) {
+            double y = i * h / 4;
+            g.strokeLine(0, y, w, y);
         }
     }
 
-    private static void drawWardrobe(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, 0, w, h);
-        gc.setStroke(it.getSecondaryColor());
-        gc.strokeLine(w / 2, 0, w / 2, h);
+    private static void drawWardrobe(GraphicsContext g, Color p, Color s, double w, double h) {
+        g.setFill(p);
+        g.fillRect(0, 0, w, h);
+        g.setStroke(s.darker());
+        g.strokeLine(w/2, 0, w/2, h);
     }
 
-    private static void drawLamp(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
+    private static void drawLamp(GraphicsContext g, Color p, Color s, double w, double h) {
         // shade
-        gc.setFill(it.getPrimaryColor());
-        gc.fillOval(0, 0, w, h * 0.6);
+        g.setFill(p);
+        g.fillOval(w*0.2, 0, w*0.6, h*0.3);
         // stand
-        gc.setStroke(it.getSecondaryColor());
-        gc.setLineWidth(2);
-        gc.strokeLine(w / 2, h * 0.6, w / 2, h);
+        g.setFill(s);
+        g.fillRect(w*0.48, h*0.3, w*0.04, h*0.5);
     }
 
-    private static void drawTVStand(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
-        // body
-        gc.setFill(it.getPrimaryColor());
-        gc.fillRect(0, 0, w, h * 0.6);
-        // shelf
-        gc.setFill(it.getSecondaryColor());
-        gc.fillRect(w * 0.1, h * 0.6, w * 0.8, h * 0.3);
+    private static void drawTV(GraphicsContext g, Color p, Color s, double w, double h) {
+        // screen
+        g.setFill(p.darker());
+        g.fillRect(w*0.1, 0, w*0.8, h*0.3);
+        // stand
+        g.setFill(s);
+        g.fillRect(w*0.4, h*0.3, w*0.2, h*0.05);
     }
 
-    private static void drawCoffeeTable(GraphicsContext gc, FurnitureItem it) {
-        double w = it.getWidth(), h = it.getHeight();
+    private static void drawCoffee(GraphicsContext g, Color p, Color s, double w, double h) {
         // top
-        gc.setFill(it.getPrimaryColor());
-        gc.fillOval(0, 0, w, h * 0.4);
+        g.setFill(p);
+        g.fillOval(0, 0, w, h*0.2);
         // legs
-        gc.setFill(it.getSecondaryColor());
-        double leg = Math.min(w, h) * 0.05;
-        gc.fillRect(leg, h * 0.4, leg, leg);
-        gc.fillRect(w - 2*leg, h * 0.4, leg, leg);
+        g.setStroke(s.darker());
+        g.setLineWidth(2);
+        double lw = w*0.05;
+        g.strokeLine(lw, h*0.2, lw, h);
+        g.strokeLine(w-lw, h*0.2, w-lw, h);
+    }
+
+    private static void drawDefault(GraphicsContext g, Color p, double w, double h) {
+        g.setFill(p);
+        g.fillRect(0, 0, w, h);
     }
 }
