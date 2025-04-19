@@ -30,19 +30,22 @@ public class Furniture3DFactory {
             case "coffee table": group = createCoffeeTable(item, new Group()); break;
             default:             group = new Group(); break;
         }
-        // pivot at centre of item
-        double pivotX = item.getX() + item.getWidth()  / 2.0;
+
+        // Corrected: match 2D exactly without negating
+        double pivotX = item.getX() + item.getWidth() / 2.0;
         double pivotZ = item.getY() + item.getHeight() / 2.0;
-        // **invert** rotation so 3D matches your 2D direction
+
         group.getTransforms().add(
                 new Rotate(
-                        -item.getRotation(),           // <- NEGATED here
+                        item.getRotation(),             // ✅ Corrected: no negative
                         pivotX, 0, pivotZ,
                         new Point3D(0, 1, 0)
                 )
         );
+
         return group;
     }
+
 
     private static PhongMaterial woodMaterial() {
         Canvas canvas = new Canvas(64, 64);
