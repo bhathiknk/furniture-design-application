@@ -9,31 +9,32 @@ import javafx.scene.transform.Translate;
 public class OrbitCameraController {
 
     private final Rotate rotateX = new Rotate(-25, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
+    private final Rotate rotateY = new Rotate(0,   Rotate.Y_AXIS);
     private final Translate translate = new Translate(0, 0, -1400);
+
+    // Expose current angles for the renderer
+    public double getAngleX() { return rotateX.getAngle(); }
+    public double getAngleY() { return rotateY.getAngle(); }
 
     private double anchorX, anchorY;
     private double velocityX = 0, velocityY = 0;
     private boolean dragging = false;
 
-    private static final double ROTATION_SPEED = 0.25;
-    private static final double DAMPING = 0.87;
-    private static final double VELOCITY_THRESHOLD = 0.03;
-    private static final double ZOOM_MIN = -5000;
-    private static final double ZOOM_MAX = -500;
+    private static final double ROTATION_SPEED    = 0.25;
+    private static final double DAMPING           = 0.87;
+    private static final double VELOCITY_THRESHOLD= 0.03;
+    private static final double ZOOM_MIN          = -5000;
+    private static final double ZOOM_MAX          = -500;
 
     private long lastTime = 0;
-    private final Group pivotGroup;
 
     public OrbitCameraController(PerspectiveCamera camera, Group pivotGroup) {
-        this.pivotGroup = pivotGroup;
         camera.getTransforms().addAll(rotateY, rotateX, translate);
         startAnimationLoop();
     }
 
     public void onMousePressed(double x, double y) {
-        anchorX = x;
-        anchorY = y;
+        anchorX = x; anchorY = y;
         dragging = true;
         velocityX = velocityY = 0;
     }
@@ -76,8 +77,10 @@ public class OrbitCameraController {
                     lastTime = now;
                     return;
                 }
-
-                if (!dragging && (Math.abs(velocityX) > VELOCITY_THRESHOLD || Math.abs(velocityY) > VELOCITY_THRESHOLD)) {
+                if (!dragging &&
+                        (Math.abs(velocityX) > VELOCITY_THRESHOLD
+                                || Math.abs(velocityY) > VELOCITY_THRESHOLD))
+                {
                     rotateY.setAngle(rotateY.getAngle() + velocityX * ROTATION_SPEED * 0.1);
                     rotateX.setAngle(clamp(rotateX.getAngle() + velocityY * ROTATION_SPEED * 0.07, -60, 60));
                     velocityX *= DAMPING;

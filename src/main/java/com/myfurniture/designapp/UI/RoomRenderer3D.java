@@ -7,6 +7,7 @@ import com.myfurniture.designapp.Factory.BoothRoomFactory;
 import com.myfurniture.designapp.Factory.Furniture3DFactory;
 import javafx.animation.*;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -15,7 +16,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
@@ -23,14 +23,18 @@ import javafx.util.Duration;
 public class RoomRenderer3D extends StackPane {
 
     private final DesignManager designManager;
-    private final Group roomGroup = new Group();
+    private final Group roomGroup  = new Group();
     private final Group pivotGroup = new Group(roomGroup);
-    private final Group root3D = new Group(pivotGroup);
+    private final Group root3D     = new Group(pivotGroup);
 
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
     private OrbitCameraController cameraController;
 
-    private boolean isLightMode = true;
+    private AmbientLight ambient;
+    private PointLight   sun;
+    private AnimationTimer lightUpdater;
+
+    private boolean isLightMode    = true;
     private boolean isAutoRotating = false;
     private Timeline autoRotateTimeline;
 
@@ -42,10 +46,10 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void init3D() {
-        SubScene subScene = new SubScene(root3D, 0, 0, true, SceneAntialiasing.BALANCED);
+        SubScene subScene = new SubScene(root3D, 0,0, true, SceneAntialiasing.BALANCED);
         subScene.widthProperty().bind(widthProperty());
         subScene.heightProperty().bind(heightProperty());
-        subScene.setFill(Color.rgb(230, 230, 230));
+        subScene.setFill(Color.rgb(240,240,245));
         subScene.setCamera(camera);
         getChildren().add(subScene);
 
@@ -55,13 +59,28 @@ public class RoomRenderer3D extends StackPane {
 
         cameraController = new OrbitCameraController(camera, pivotGroup);
 
-        setOnMousePressed(e -> cameraController.onMousePressed(e.getSceneX(), e.getSceneY()));
-        setOnMouseDragged(e -> cameraController.onMouseDragged(e.getSceneX(), e.getSceneY()));
+        // Mouse controls
+        setOnMousePressed(e  -> cameraController.onMousePressed(e.getSceneX(), e.getSceneY()));
+        setOnMouseDragged(e  -> cameraController.onMouseDragged(e.getSceneX(), e.getSceneY()));
         setOnMouseReleased(e -> cameraController.onMouseReleased());
         addEventHandler(ScrollEvent.SCROLL, e -> cameraController.zoom(e.getDeltaY()));
 
         widthProperty().addListener((o, __, ___) -> rebuild());
         heightProperty().addListener((o, __, ___) -> rebuild());
+
+        // Setup our dynamic lights
+        ambient = new AmbientLight();
+        sun     = new PointLight();
+        root3D.getChildren().addAll(ambient, sun);
+
+        // Update sun position each frame
+        lightUpdater = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                updateSunPosition();
+            }
+        };
+        lightUpdater.start();
 
         rebuild();
         showUserHint("💡 Drag to rotate, scroll to zoom");
@@ -70,67 +89,76 @@ public class RoomRenderer3D extends StackPane {
 
     private void rebuild() {
         roomGroup.getChildren().clear();
+
         RoomDesign room = designManager.getCurrentDesign();
         if (room == null) return;
 
+        // Walls + floor
         roomGroup.getChildren().add(BoothRoomFactory.createBooth(room));
+        // Furniture
         for (FurnitureItem item : room.getFurniture()) {
             roomGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
+        // Scale & center
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
-        double scaleFactor = Math.min(sX, sZ);
-        roomGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
+        double scale = Math.min(sX, sZ);
+        roomGroup.getTransforms().setAll(new Scale(scale, -scale, -scale));
 
         Bounds b = roomGroup.getBoundsInParent();
-        double cX = (b.getMinX() + b.getMaxX()) / 2.0;
-        double cY = (b.getMinY() + b.getMaxY()) / 2.0;
-        double cZ = (b.getMinZ() + b.getMaxZ()) / 2.0;
+        double cX = (b.getMinX()+b.getMaxX())/2.0;
+        double cY = (b.getMinY()+b.getMaxY())/2.0;
+        double cZ = (b.getMinZ()+b.getMaxZ())/2.0;
         roomGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
 
-        setupLighting();
+        setupLighting();  // set base intensities
     }
 
     private void setupLighting() {
-        root3D.getChildren().removeIf(n -> n instanceof LightBase);
         if (isLightMode) {
-            AmbientLight amb = new AmbientLight(Color.rgb(160, 160, 160, 0.25));
-            PointLight key = new PointLight(Color.rgb(255, 244, 230));
-            key.setTranslateX(-400); key.setTranslateY(-250); key.setTranslateZ(-300);
-            PointLight rim = new PointLight(Color.rgb(200, 200, 255, 0.4));
-            rim.setTranslateX(300); rim.setTranslateY(-100); rim.setTranslateZ(300);
-            PointLight floor = new PointLight(Color.rgb(180, 180, 180, 0.2));
-            floor.setTranslateY(50);
-            PointLight top = new PointLight(Color.rgb(255, 255, 240, 0.15));
-            top.setTranslateY(-500);
-            root3D.getChildren().addAll(amb, key, rim, floor, top);
+            ambient.setColor(Color.rgb(200,200,200, 0.10));
+            sun.setColor   (Color.rgb(255,244,220, 0.60));
         } else {
-            AmbientLight amb = new AmbientLight(Color.rgb(40, 40, 40, 0.2));
-            PointLight moon = new PointLight(Color.rgb(120, 120, 140));
-            moon.setTranslateX(-200); moon.setTranslateY(-300); moon.setTranslateZ(-250);
-            root3D.getChildren().addAll(amb, moon);
+            ambient.setColor(Color.rgb( 60, 60, 80, 0.05));
+            sun.setColor   (Color.rgb(140,150,200, 0.40));
         }
+        // initial placement
+        updateSunPosition();
+    }
+
+    /**
+     * Place the “sun” very far away in whatever direction the camera is pointing.
+     * As the user orbits, rotateX/Y change, so this moves too — real‑time shading.
+     */
+    private void updateSunPosition() {
+        double ry = Math.toRadians(cameraController.getAngleY());
+        double rx = Math.toRadians(cameraController.getAngleX());
+        // camera forward vector in world coords
+        double dx = -Math.sin(ry);
+        double dy =  Math.sin(rx);
+        double dz = -Math.cos(ry);
+        double D = 30_000; // far enough to approximate directional
+        sun.setTranslateX(dx * D);
+        sun.setTranslateY(dy * D);
+        sun.setTranslateZ(dz * D);
     }
 
     private void addOverlayButtons() {
-        Button btnReset = overlayButton("🔄 Reset View");
-        Button btnLight = overlayButton("💡 Toggle Light");
-        Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
+        Button btnReset       = overlayButton("🔄 Reset View");
+        Button btnLightToggle = overlayButton("💡 Toggle Light");
+        Button btnAutoRotate  = overlayButton("🎥 Toggle Auto-Rotate");
 
-        btnReset.setOnAction(e -> cameraController.resetView());
-        btnLight.setOnAction(e -> {
-            isLightMode = !isLightMode;
-            setupLighting();
-        });
-        btnAutoRotate.setOnAction(e -> {
+        btnReset      .setOnAction(e -> cameraController.resetView());
+        btnLightToggle.setOnAction(e -> { isLightMode = !isLightMode; setupLighting(); });
+        btnAutoRotate .setOnAction(e -> {
             isAutoRotating = !isAutoRotating;
             if (isAutoRotating) startAutoRotate();
-            else stopAutoRotate();
+            else              stopAutoRotate();
         });
 
-        VBox box = new VBox(8, btnReset, btnLight, btnAutoRotate);
-        box.setStyle("-fx-padding: 10;");
+        VBox box = new VBox(8, btnReset, btnLightToggle, btnAutoRotate);
+        box.setStyle("-fx-padding:10;");
         box.setTranslateX(10);
         box.setTranslateY(10);
         getChildren().add(box);
@@ -139,10 +167,9 @@ public class RoomRenderer3D extends StackPane {
 
     private void startAutoRotate() {
         autoRotateTimeline = new Timeline(new KeyFrame(Duration.millis(16), e -> {
-            double simulatedX = getWidth() / 2.0;
-            double simulatedY = getHeight() / 2.0;
-            cameraController.onMousePressed(simulatedX, simulatedY);
-            cameraController.onMouseDragged(simulatedX + 1, simulatedY);
+            double cx = getWidth()/2.0, cy = getHeight()/2.0;
+            cameraController.onMousePressed(cx, cy);
+            cameraController.onMouseDragged(cx+1, cy);
             cameraController.onMouseReleased();
         }));
         autoRotateTimeline.setCycleCount(Animation.INDEFINITE);
@@ -150,19 +177,17 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void stopAutoRotate() {
-        if (autoRotateTimeline != null) {
-            autoRotateTimeline.stop();
-        }
+        if (autoRotateTimeline != null) autoRotateTimeline.stop();
     }
 
     private Button overlayButton(String label) {
         Button b = new Button(label);
         b.setFont(Font.font(13));
         b.setStyle("""
-            -fx-background-color: linear-gradient(to right, #3498db, #2980b9);
-            -fx-text-fill: white;
-            -fx-background-radius: 8;
-            -fx-padding: 6 12;
+            -fx-background-color: linear-gradient(to right,#3498db,#2980b9);
+            -fx-text-fill:white;
+            -fx-background-radius:8;
+            -fx-padding:6 12;
         """);
         return b;
     }
@@ -175,15 +200,16 @@ public class RoomRenderer3D extends StackPane {
     private void showUserHint(String message) {
         Label hint = new Label(message);
         hint.setStyle("""
-            -fx-background-color: #000000cc;
-            -fx-text-fill: white;
-            -fx-padding: 6 12;
-            -fx-background-radius: 10;
+            -fx-background-color:#000000cc;
+            -fx-text-fill:white;
+            -fx-padding:6 12;
+            -fx-background-radius:10;
         """);
         hint.setFont(Font.font(13));
         getChildren().add(hint);
         StackPane.setAlignment(hint, javafx.geometry.Pos.BOTTOM_CENTER);
-        Timeline fade = new Timeline(new KeyFrame(Duration.seconds(4), new KeyValue(hint.opacityProperty(), 0)));
+        Timeline fade = new Timeline(new KeyFrame(Duration.seconds(4),
+                new KeyValue(hint.opacityProperty(), 0)));
         fade.setOnFinished(e -> getChildren().remove(hint));
         fade.play();
     }

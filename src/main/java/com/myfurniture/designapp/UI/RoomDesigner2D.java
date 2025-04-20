@@ -174,6 +174,9 @@ public class RoomDesigner2D extends BorderPane {
                 furniturePane, actionBox);
 
         /* colour‑preview bar --------------------------------------------- */
+        Label selectedLabel = new Label("Selected Furniture Color");
+        selectedLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
         primarySwatch   = swatch(chosenPrimary);
         secondarySwatch = swatch(chosenSecondary);
 
@@ -184,10 +187,14 @@ public class RoomDesigner2D extends BorderPane {
         boxPrim.setAlignment(Pos.CENTER);
         boxSec .setAlignment(Pos.CENTER);
 
-        HBox previewBar = new HBox(40, boxPrim, boxSec);
+        VBox wrapper = new VBox(6, selectedLabel, new HBox(40, boxPrim, boxSec));
+        wrapper.setAlignment(Pos.CENTER);
+        wrapper.setPadding(new Insets(8));
+        wrapper.setStyle("-fx-background-color:white;");
+
+        HBox previewBar = new HBox(wrapper);
         previewBar.setAlignment(Pos.CENTER);
-        previewBar.setPadding(new Insets(8));
-        previewBar.setStyle("-fx-background-color:white;");
+
 
         /* centre – preview bar + canvas ---------------------------------- */
         canvas = new DesignerCanvas(currentRoomDesign);
