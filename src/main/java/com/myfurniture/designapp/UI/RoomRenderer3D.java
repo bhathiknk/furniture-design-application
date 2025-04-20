@@ -12,7 +12,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.*;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
@@ -27,9 +28,9 @@ public class RoomRenderer3D extends StackPane {
     private final Group pivotGroup   = new Group(contentGroup);
     private final Group root3D       = new Group(pivotGroup);
 
-    // pitch only, no yaw -> keeps left/right consistent with 2D
-    private final Rotate rotateX = new Rotate(-25, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(0,   Rotate.Y_AXIS);
+    // start front‑facing (no tilt)
+    private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
+    private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
 
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
 
@@ -51,7 +52,6 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void init3D() {
-        // apply pitch but no yaw
         pivotGroup.getTransforms().addAll(rotateX, rotateY);
 
         SubScene subScene = new SubScene(root3D, 0, 0, true, SceneAntialiasing.BALANCED);
@@ -87,21 +87,20 @@ public class RoomRenderer3D extends StackPane {
             contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
-        // scale so the whole room fits
+        // scale to fit
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
-
         contentGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
 
-        // center around origin
-        Bounds bounds = contentGroup.getBoundsInParent();
-        double cX = (bounds.getMinX() + bounds.getMaxX()) / 2.0;
-        double cY = (bounds.getMinY() + bounds.getMaxY()) / 2.0;
-        double cZ = (bounds.getMinZ() + bounds.getMaxZ()) / 2.0;
+        // center origin
+        Bounds b = contentGroup.getBoundsInParent();
+        double cX = (b.getMinX() + b.getMaxX()) / 2.0;
+        double cY = (b.getMinY() + b.getMaxY()) / 2.0;
+        double cZ = (b.getMinZ() + b.getMaxZ()) / 2.0;
         contentGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
 
-        updateCameraDistance(bounds);
+        updateCameraDistance(b);
         updateCameraPosition();
         setupLighting();
     }
@@ -119,38 +118,22 @@ public class RoomRenderer3D extends StackPane {
 
     private void setupLighting() {
         root3D.getChildren().removeIf(n -> n instanceof LightBase);
-
         if (isLightMode) {
-            AmbientLight ambient   = new AmbientLight(Color.rgb(160, 160, 160, 0.25));
-            PointLight keyLight    = new PointLight(Color.rgb(255, 244, 230));
-            PointLight rimLight    = new PointLight(Color.rgb(200, 200, 255, 0.4));
-            PointLight floorLight  = new PointLight(Color.rgb(180, 180, 180, 0.2));
-            PointLight topLight    = new PointLight(Color.rgb(255, 255, 240, 0.15));
-
-            keyLight.setTranslateX(-400);
-            keyLight.setTranslateY(-250);
-            keyLight.setTranslateZ(-300);
-
-            rimLight.setTranslateX(300);
-            rimLight.setTranslateY(-100);
-            rimLight.setTranslateZ(300);
-
-            floorLight.setTranslateX(0);
-            floorLight.setTranslateY(50);
-            floorLight.setTranslateZ(0);
-
-            topLight.setTranslateX(0);
-            topLight.setTranslateY(-500);
-            topLight.setTranslateZ(0);
-
-            root3D.getChildren().addAll(ambient, keyLight, rimLight, floorLight, topLight);
+            AmbientLight amb = new AmbientLight(Color.rgb(160,160,160,0.25));
+            PointLight key = new PointLight(Color.rgb(255,244,230));
+            key.setTranslateX(-400); key.setTranslateY(-250); key.setTranslateZ(-300);
+            PointLight rim = new PointLight(Color.rgb(200,200,255,0.4));
+            rim.setTranslateX(300); rim.setTranslateY(-100); rim.setTranslateZ(300);
+            PointLight floor = new PointLight(Color.rgb(180,180,180,0.2));
+            floor.setTranslateY(50);
+            PointLight top = new PointLight(Color.rgb(255,255,240,0.15));
+            top.setTranslateY(-500);
+            root3D.getChildren().addAll(amb, key, rim, floor, top);
         } else {
-            AmbientLight ambient = new AmbientLight(Color.rgb(40, 40, 40, 0.2));
-            PointLight moonLight = new PointLight(Color.rgb(120, 120, 140));
-            moonLight.setTranslateX(-200);
-            moonLight.setTranslateY(-300);
-            moonLight.setTranslateZ(-250);
-            root3D.getChildren().addAll(ambient, moonLight);
+            AmbientLight amb = new AmbientLight(Color.rgb(40,40,40,0.2));
+            PointLight moon = new PointLight(Color.rgb(120,120,140));
+            moon.setTranslateX(-200); moon.setTranslateY(-300); moon.setTranslateZ(-250);
+            root3D.getChildren().addAll(amb, moon);
         }
     }
 
@@ -183,9 +166,42 @@ public class RoomRenderer3D extends StackPane {
         return Math.max(min, Math.min(max, val));
     }
 
-    /** call to re‑center & reset angles */
+    /** smoothly reset to front‑facing, centered, full‑fit view */
+    private void smoothReset() {
+        rebuild();  // recalc cameraDistance
+        Timeline t = new Timeline(
+                new KeyFrame(Duration.ZERO,
+                        new KeyValue(rotateX.angleProperty(), rotateX.getAngle()),
+                        new KeyValue(rotateY.angleProperty(), rotateY.getAngle()),
+                        new KeyValue(camera.translateZProperty(), camera.getTranslateZ())
+                ),
+                new KeyFrame(Duration.seconds(1),
+                        new KeyValue(rotateX.angleProperty(), 0, Interpolator.EASE_BOTH),
+                        new KeyValue(rotateY.angleProperty(), 0, Interpolator.EASE_BOTH),
+                        new KeyValue(camera.translateZProperty(), -cameraDistance, Interpolator.EASE_BOTH)
+                )
+        );
+        t.play();
+    }
+
+    /** smoothly animate zoom‑to‑fit */
+    private void smoothZoomFit() {
+        rebuild();
+        double targetZ = -cameraDistance;
+        Timeline t = new Timeline(
+                new KeyFrame(Duration.ZERO,
+                        new KeyValue(camera.translateZProperty(), camera.getTranslateZ())
+                ),
+                new KeyFrame(Duration.seconds(1),
+                        new KeyValue(camera.translateZProperty(), targetZ, Interpolator.EASE_BOTH)
+                )
+        );
+        t.play();
+    }
+
+    /** call to re‑center & reset angles immediately */
     public void updateScene() {
-        rotateX.setAngle(-25);
+        rotateX.setAngle(0);
         rotateY.setAngle(0);
         rebuild();
     }
@@ -196,13 +212,8 @@ public class RoomRenderer3D extends StackPane {
         Button btnLight      = overlayButton("💡 Toggle Light");
         Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
 
-        btnReset.setOnAction(e -> {
-            rotateX.setAngle(-25);
-            rotateY.setAngle(0);
-            updateCameraPosition();
-        });
-
-        btnZoomFit.setOnAction(e -> rebuild());
+        btnReset.setOnAction(e -> smoothReset());
+        btnZoomFit.setOnAction(e -> smoothZoomFit());
         btnLight.setOnAction(e -> {
             isLightMode = !isLightMode;
             setupLighting();
