@@ -8,7 +8,8 @@ import com.myfurniture.designapp.Factory.Furniture3DFactory;
 import javafx.animation.*;
 import javafx.geometry.Bounds;
 import javafx.scene.*;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
@@ -28,18 +29,19 @@ public class RoomRenderer3D extends StackPane {
 
     private final Rotate rotateX = new Rotate(-25, Rotate.X_AXIS);
     private final Rotate rotateY = new Rotate(180, Rotate.Y_AXIS);
-
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
-    private double cameraDistance = 1400;
-    private static final double MIN_DIST = 500;
-    private static final double MAX_DIST = 5000;
 
+    private double cameraDistance = 1400;
     private double anchorX, anchorY;
     private double anchorAngleX, anchorAngleY;
+    private boolean isLightMode = true;
+    private boolean isAutoRotating = false;
+    private Timeline autoRotateTimeline;
+
     private static final double FIT_W = 700;
     private static final double FIT_D = 500;
-
-    private boolean isLightMode = true;
+    private static final double MIN_DIST = 500;
+    private static final double MAX_DIST = 5000;
 
     public RoomRenderer3D(DesignManager designManager) {
         this.designManager = designManager;
@@ -52,12 +54,11 @@ public class RoomRenderer3D extends StackPane {
         SubScene subScene = new SubScene(root3D, 0, 0, true, SceneAntialiasing.BALANCED);
         subScene.widthProperty().bind(widthProperty());
         subScene.heightProperty().bind(heightProperty());
-        subScene.setFill(Color.WHITE);
+        subScene.setFill(Color.rgb(245, 245, 245));
         subScene.setCamera(camera);
-
         getChildren().add(subScene);
 
-        camera.setFieldOfView(35);
+        camera.setFieldOfView(40);
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
 
@@ -75,7 +76,6 @@ public class RoomRenderer3D extends StackPane {
 
     private void rebuild() {
         contentGroup.getChildren().clear();
-
         RoomDesign room = designManager.getCurrentDesign();
         if (room == null) return;
 
@@ -84,17 +84,15 @@ public class RoomRenderer3D extends StackPane {
             contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
-        // Auto-scale to fit view
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
 
-        // Flip vertically so floor appears at bottom (Y-axis scale: -1)
+        // Y-axis flipped for correct orientation
         contentGroup.getTransforms().setAll(
-                new Scale(scaleFactor, -scaleFactor, scaleFactor)  // flipped Y
+                new Scale(scaleFactor, -scaleFactor, scaleFactor)
         );
 
-        // Center content
         Bounds bounds = contentGroup.getBoundsInParent();
         double cX = (bounds.getMinX() + bounds.getMaxX()) / 2.0;
         double cY = (bounds.getMinY() + bounds.getMaxY()) / 2.0;
@@ -104,18 +102,6 @@ public class RoomRenderer3D extends StackPane {
         updateCameraDistance(bounds);
         updateCameraPosition();
         setupLighting();
-    }
-
-    private void setupLighting() {
-        root3D.getChildren().removeIf(n -> n instanceof LightBase);
-
-        AmbientLight ambientLight = new AmbientLight(isLightMode ? Color.WHITE : Color.DARKGRAY);
-        PointLight pointLight = new PointLight(isLightMode ? Color.WHITE : Color.GRAY);
-        pointLight.setTranslateX(-300);
-        pointLight.setTranslateY(-250);
-        pointLight.setTranslateZ(-400);
-
-        root3D.getChildren().addAll(ambientLight, pointLight);
     }
 
     private void updateCameraDistance(Bounds bounds) {
@@ -128,6 +114,18 @@ public class RoomRenderer3D extends StackPane {
         camera.setTranslateY(-100);
     }
 
+    private void setupLighting() {
+        root3D.getChildren().removeIf(n -> n instanceof LightBase);
+
+        AmbientLight ambient = new AmbientLight(isLightMode ? Color.rgb(255, 255, 255, 0.7) : Color.rgb(80, 80, 80, 0.5));
+        PointLight spotlight = new PointLight(isLightMode ? Color.WHITE : Color.LIGHTGRAY);
+        spotlight.setTranslateX(-300);
+        spotlight.setTranslateY(-250);
+        spotlight.setTranslateZ(-400);
+
+        root3D.getChildren().addAll(ambient, spotlight);
+    }
+
     private void onMousePressed(MouseEvent e) {
         anchorX = e.getSceneX();
         anchorY = e.getSceneY();
@@ -138,13 +136,17 @@ public class RoomRenderer3D extends StackPane {
     private void onMouseDragged(MouseEvent e) {
         double dx = e.getSceneX() - anchorX;
         double dy = e.getSceneY() - anchorY;
-        rotateY.setAngle(anchorAngleY + dx * 0.5);
-        rotateX.setAngle(clamp(anchorAngleX - dy * 0.5, -85, 85));
+        rotateY.setAngle(anchorAngleY + dx * 0.4);
+        rotateX.setAngle(clamp(anchorAngleX - dy * 0.4, -85, 85));
     }
 
     private void onScroll(ScrollEvent e) {
-        cameraDistance = clamp(cameraDistance - e.getDeltaY(), MIN_DIST, MAX_DIST);
-        updateCameraPosition();
+        double delta = e.getDeltaY();
+        double target = clamp(cameraDistance - delta, MIN_DIST, MAX_DIST);
+        Timeline zoom = new Timeline(new KeyFrame(Duration.millis(200),
+                new KeyValue(camera.translateZProperty(), -target, Interpolator.EASE_BOTH)));
+        cameraDistance = target;
+        zoom.play();
     }
 
     private static double clamp(double val, double min, double max) {
@@ -161,6 +163,7 @@ public class RoomRenderer3D extends StackPane {
         Button btnReset = overlayButton("🔄 Reset View");
         Button btnZoomFit = overlayButton("🔍 Zoom to Fit");
         Button btnLight = overlayButton("💡 Toggle Light");
+        Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
 
         btnReset.setOnAction(e -> {
             rotateX.setAngle(-25);
@@ -174,7 +177,13 @@ public class RoomRenderer3D extends StackPane {
             setupLighting();
         });
 
-        VBox box = new VBox(8, btnReset, btnZoomFit, btnLight);
+        btnAutoRotate.setOnAction(e -> {
+            isAutoRotating = !isAutoRotating;
+            if (isAutoRotating) startAutoRotate();
+            else stopAutoRotate();
+        });
+
+        VBox box = new VBox(8, btnReset, btnZoomFit, btnLight, btnAutoRotate);
         box.setStyle("-fx-padding: 10;");
         box.setTranslateX(10);
         box.setTranslateY(10);
@@ -182,11 +191,25 @@ public class RoomRenderer3D extends StackPane {
         StackPane.setAlignment(box, javafx.geometry.Pos.TOP_LEFT);
     }
 
+    private void startAutoRotate() {
+        autoRotateTimeline = new Timeline(new KeyFrame(Duration.millis(40), e -> {
+            rotateY.setAngle(rotateY.getAngle() + 0.5);
+        }));
+        autoRotateTimeline.setCycleCount(Animation.INDEFINITE);
+        autoRotateTimeline.play();
+    }
+
+    private void stopAutoRotate() {
+        if (autoRotateTimeline != null) {
+            autoRotateTimeline.stop();
+        }
+    }
+
     private Button overlayButton(String label) {
         Button b = new Button(label);
         b.setFont(Font.font(13));
         b.setStyle("""
-            -fx-background-color: #3498db;
+            -fx-background-color: linear-gradient(to right, #3498db, #2980b9);
             -fx-text-fill: white;
             -fx-background-radius: 8;
             -fx-padding: 6 12;
@@ -197,9 +220,9 @@ public class RoomRenderer3D extends StackPane {
     private void showUserHint(String message) {
         Label hint = new Label(message);
         hint.setStyle("""
-            -fx-background-color: #333333dd;
+            -fx-background-color: #000000cc;
             -fx-text-fill: white;
-            -fx-padding: 6px 12px;
+            -fx-padding: 6 12;
             -fx-background-radius: 10;
         """);
         hint.setFont(Font.font(13));
