@@ -24,11 +24,13 @@ public class RoomRenderer3D extends StackPane {
 
     private final DesignManager designManager;
     private final Group contentGroup = new Group();
-    private final Group pivotGroup = new Group(contentGroup);
-    private final Group root3D = new Group(pivotGroup);
+    private final Group pivotGroup   = new Group(contentGroup);
+    private final Group root3D       = new Group(pivotGroup);
 
+    // pitch only, no yaw -> keeps left/right consistent with 2D
     private final Rotate rotateX = new Rotate(-25, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(180, Rotate.Y_AXIS);
+    private final Rotate rotateY = new Rotate(0,   Rotate.Y_AXIS);
+
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
 
     private double cameraDistance = 1400;
@@ -38,10 +40,10 @@ public class RoomRenderer3D extends StackPane {
     private boolean isAutoRotating = false;
     private Timeline autoRotateTimeline;
 
-    private static final double FIT_W = 700;
-    private static final double FIT_D = 500;
-    private static final double MIN_DIST = 500;
-    private static final double MAX_DIST = 5000;
+    private static final double FIT_W     = 700;
+    private static final double FIT_D     = 500;
+    private static final double MIN_DIST  = 500;
+    private static final double MAX_DIST  = 5000;
 
     public RoomRenderer3D(DesignManager designManager) {
         this.designManager = designManager;
@@ -49,16 +51,17 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void init3D() {
+        // apply pitch but no yaw
         pivotGroup.getTransforms().addAll(rotateX, rotateY);
 
         SubScene subScene = new SubScene(root3D, 0, 0, true, SceneAntialiasing.BALANCED);
         subScene.widthProperty().bind(widthProperty());
         subScene.heightProperty().bind(heightProperty());
-        subScene.setFill(Color.rgb(245, 245, 245));
+        subScene.setFill(Color.rgb(230, 230, 230));
         subScene.setCamera(camera);
         getChildren().add(subScene);
 
-        camera.setFieldOfView(40);
+        camera.setFieldOfView(35);
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
 
@@ -84,15 +87,14 @@ public class RoomRenderer3D extends StackPane {
             contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
+        // scale so the whole room fits
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
 
-        // Y-axis flipped for correct orientation
-        contentGroup.getTransforms().setAll(
-                new Scale(scaleFactor, -scaleFactor, scaleFactor)
-        );
+        contentGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
 
+        // center around origin
         Bounds bounds = contentGroup.getBoundsInParent();
         double cX = (bounds.getMinX() + bounds.getMaxX()) / 2.0;
         double cY = (bounds.getMinY() + bounds.getMaxY()) / 2.0;
@@ -105,7 +107,8 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void updateCameraDistance(Bounds bounds) {
-        double maxDim = Math.max(bounds.getWidth(), Math.max(bounds.getHeight(), bounds.getDepth()));
+        double maxDim = Math.max(bounds.getWidth(),
+                Math.max(bounds.getHeight(), bounds.getDepth()));
         cameraDistance = maxDim * 1.8;
     }
 
@@ -117,13 +120,38 @@ public class RoomRenderer3D extends StackPane {
     private void setupLighting() {
         root3D.getChildren().removeIf(n -> n instanceof LightBase);
 
-        AmbientLight ambient = new AmbientLight(isLightMode ? Color.rgb(255, 255, 255, 0.7) : Color.rgb(80, 80, 80, 0.5));
-        PointLight spotlight = new PointLight(isLightMode ? Color.WHITE : Color.LIGHTGRAY);
-        spotlight.setTranslateX(-300);
-        spotlight.setTranslateY(-250);
-        spotlight.setTranslateZ(-400);
+        if (isLightMode) {
+            AmbientLight ambient   = new AmbientLight(Color.rgb(160, 160, 160, 0.25));
+            PointLight keyLight    = new PointLight(Color.rgb(255, 244, 230));
+            PointLight rimLight    = new PointLight(Color.rgb(200, 200, 255, 0.4));
+            PointLight floorLight  = new PointLight(Color.rgb(180, 180, 180, 0.2));
+            PointLight topLight    = new PointLight(Color.rgb(255, 255, 240, 0.15));
 
-        root3D.getChildren().addAll(ambient, spotlight);
+            keyLight.setTranslateX(-400);
+            keyLight.setTranslateY(-250);
+            keyLight.setTranslateZ(-300);
+
+            rimLight.setTranslateX(300);
+            rimLight.setTranslateY(-100);
+            rimLight.setTranslateZ(300);
+
+            floorLight.setTranslateX(0);
+            floorLight.setTranslateY(50);
+            floorLight.setTranslateZ(0);
+
+            topLight.setTranslateX(0);
+            topLight.setTranslateY(-500);
+            topLight.setTranslateZ(0);
+
+            root3D.getChildren().addAll(ambient, keyLight, rimLight, floorLight, topLight);
+        } else {
+            AmbientLight ambient = new AmbientLight(Color.rgb(40, 40, 40, 0.2));
+            PointLight moonLight = new PointLight(Color.rgb(120, 120, 140));
+            moonLight.setTranslateX(-200);
+            moonLight.setTranslateY(-300);
+            moonLight.setTranslateZ(-250);
+            root3D.getChildren().addAll(ambient, moonLight);
+        }
     }
 
     private void onMousePressed(MouseEvent e) {
@@ -143,8 +171,10 @@ public class RoomRenderer3D extends StackPane {
     private void onScroll(ScrollEvent e) {
         double delta = e.getDeltaY();
         double target = clamp(cameraDistance - delta, MIN_DIST, MAX_DIST);
-        Timeline zoom = new Timeline(new KeyFrame(Duration.millis(200),
-                new KeyValue(camera.translateZProperty(), -target, Interpolator.EASE_BOTH)));
+        Timeline zoom = new Timeline(new KeyFrame(
+                Duration.millis(200),
+                new KeyValue(camera.translateZProperty(), -target, Interpolator.EASE_BOTH)
+        ));
         cameraDistance = target;
         zoom.play();
     }
@@ -153,21 +183,22 @@ public class RoomRenderer3D extends StackPane {
         return Math.max(min, Math.min(max, val));
     }
 
+    /** call to re‑center & reset angles */
     public void updateScene() {
         rotateX.setAngle(-25);
-        rotateY.setAngle(180);
+        rotateY.setAngle(0);
         rebuild();
     }
 
     private void addOverlayButtons() {
-        Button btnReset = overlayButton("🔄 Reset View");
-        Button btnZoomFit = overlayButton("🔍 Zoom to Fit");
-        Button btnLight = overlayButton("💡 Toggle Light");
+        Button btnReset      = overlayButton("🔄 Reset View");
+        Button btnZoomFit    = overlayButton("🔍 Zoom to Fit");
+        Button btnLight      = overlayButton("💡 Toggle Light");
         Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
 
         btnReset.setOnAction(e -> {
             rotateX.setAngle(-25);
-            rotateY.setAngle(180);
+            rotateY.setAngle(0);
             updateCameraPosition();
         });
 
@@ -176,7 +207,6 @@ public class RoomRenderer3D extends StackPane {
             isLightMode = !isLightMode;
             setupLighting();
         });
-
         btnAutoRotate.setOnAction(e -> {
             isAutoRotating = !isAutoRotating;
             if (isAutoRotating) startAutoRotate();
@@ -192,9 +222,9 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void startAutoRotate() {
-        autoRotateTimeline = new Timeline(new KeyFrame(Duration.millis(40), e -> {
-            rotateY.setAngle(rotateY.getAngle() + 0.5);
-        }));
+        autoRotateTimeline = new Timeline(new KeyFrame(
+                Duration.millis(40), e -> rotateY.setAngle(rotateY.getAngle() + 0.5)
+        ));
         autoRotateTimeline.setCycleCount(Animation.INDEFINITE);
         autoRotateTimeline.play();
     }
@@ -229,7 +259,8 @@ public class RoomRenderer3D extends StackPane {
         getChildren().add(hint);
         StackPane.setAlignment(hint, javafx.geometry.Pos.BOTTOM_CENTER);
         Timeline fade = new Timeline(
-                new KeyFrame(Duration.seconds(4), new KeyValue(hint.opacityProperty(), 0)));
+                new KeyFrame(Duration.seconds(4), new KeyValue(hint.opacityProperty(), 0))
+        );
         fade.setOnFinished(e -> getChildren().remove(hint));
         fade.play();
     }

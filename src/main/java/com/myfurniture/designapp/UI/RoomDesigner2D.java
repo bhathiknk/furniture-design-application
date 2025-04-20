@@ -59,21 +59,19 @@ public class RoomDesigner2D extends BorderPane {
     /* ui build                                                               */
     /* --------------------------------------------------------------------- */
     private void initUI() {
-
         /* palette --------------------------------------------------------- */
         palettePanel = new VBox(20);
         palettePanel.setPrefWidth(300);
         palettePanel.setPadding(new Insets(20));
-        palettePanel.setStyle("""
-                -fx-background-color:#061fc1;
-                -fx-border-color:#34495e;
-                -fx-border-width:0 2 0 0;""");
+        palettePanel.setStyle(
+                "-fx-background-color:#061fc1;" +
+                        "-fx-border-color:#34495e;" +
+                        "-fx-border-width:0 2 0 0;");
 
         /* room settings --------------------------------------------------- */
         txtRoomWidth  = new TextField("800");
         txtRoomHeight = new TextField("600");
 
-        // keep W/H synced when square is selected
         txtRoomWidth.textProperty().addListener((o,oldVal,newVal) -> {
             if (shapeCombo.getValue() == ShapeType.SQUARE) txtRoomHeight.setText(newVal);
         });
@@ -196,12 +194,12 @@ public class RoomDesigner2D extends BorderPane {
 
         StackPane canvasHolder = new StackPane(canvas);
         canvasHolder.setAlignment(Pos.CENTER);
-        canvasHolder.setStyle("""
-                -fx-background-color:#ecf0f1;
-                -fx-background-radius:8;
-                -fx-padding:8;""");
+        canvasHolder.setStyle(
+                "-fx-background-color:#ecf0f1;" +
+                        "-fx-background-radius:8;" +
+                        "-fx-padding:8;");
         canvasHolder.setEffect(new DropShadow(10, Color.gray(0,0.25)));
-        canvasHolder.widthProperty() .addListener((o,__,___)-> canvas.draw());
+        canvasHolder.widthProperty().addListener((o,__,___)-> canvas.draw());
         canvasHolder.heightProperty().addListener((o,__,___)-> canvas.draw());
 
         VBox centreBox = new VBox(previewBar, canvasHolder);
@@ -216,7 +214,6 @@ public class RoomDesigner2D extends BorderPane {
     /* --------------------------------------------------------------------- */
     /* helpers                                                                */
     /* --------------------------------------------------------------------- */
-    /** returns a fixed 40×40 px colour chip */
     private Region swatch(Color colour) {
         Region chip = new Region();
         chip.setMinSize(40, 40);
@@ -229,22 +226,19 @@ public class RoomDesigner2D extends BorderPane {
     }
 
     private void updateColourPreview() {
-        primarySwatch  .setStyle("-fx-background-color:"+toHex(chosenPrimary)+"; -fx-border-color:black;");
-        secondarySwatch.setStyle("-fx-background-color:"+toHex(chosenSecondary)+"; -fx-border-color:black;");
+        primarySwatch .setStyle("-fx-background-color:" + toHex(chosenPrimary) + "; -fx-border-color:black;");
+        secondarySwatch.setStyle("-fx-background-color:" + toHex(chosenSecondary) + "; -fx-border-color:black;");
     }
 
-    /* shape handling ------------------------------------------------------ */
     private void onShapeSelected() {
-        ShapeType s = shapeCombo.getValue();
-        if (s == ShapeType.SQUARE) {
-            // keep values in sync (listener already does that)
+        if (shapeCombo.getValue() == ShapeType.SQUARE) {
             txtRoomHeight.setText(txtRoomWidth.getText());
         } else {
-            // restore default aspect
             txtRoomWidth .setText("800");
             txtRoomHeight.setText("600");
         }
     }
+
     private void applyRoomSettings() {
         try {
             int w = Integer.parseInt(txtRoomWidth.getText().trim());
@@ -253,10 +247,10 @@ public class RoomDesigner2D extends BorderPane {
                     : Integer.parseInt(txtRoomHeight.getText().trim());
 
             currentRoomDesign.setShapeType(shapeCombo.getValue());
-            currentRoomDesign.setRoomWidth (w);
+            currentRoomDesign.setRoomWidth(w);
             currentRoomDesign.setRoomHeight(h);
 
-            canvas.setWidth (w);
+            canvas.setWidth(w);
             canvas.setHeight(h);
 
             refreshAll();
@@ -265,7 +259,7 @@ public class RoomDesigner2D extends BorderPane {
         }
     }
 
-    /* wall colours -------------------------------------------------------- */
+    /** let user pick back/left/right wall colour */
     private void pickWallColour(String which) {
         Color current = switch (which) {
             case "back"  -> currentRoomDesign.getBackWallColor();
@@ -282,7 +276,8 @@ public class RoomDesigner2D extends BorderPane {
         refreshAll();
     }
 
-    /* add furniture ------------------------------------------------------- */
+    /* --------------------------------------------------------------------- */
+    /* updated: addFurniture now triggers immediate 3D update               */
     private void addFurniture(String type) {
         FurnitureItem it = FurnitureFactory.createFurniture(type);
         if (it == null) return;
@@ -291,10 +286,11 @@ public class RoomDesigner2D extends BorderPane {
         it.setX(currentRoomDesign.getRoomWidth()/2  - it.getWidth()/2);
         it.setY(currentRoomDesign.getRoomHeight()/2 - it.getHeight()/2);
         currentRoomDesign.addFurniture(it);
+
+        // instant 3D rebuild
         refreshAll();
     }
 
-    /* save / load --------------------------------------------------------- */
     private void saveDesign() {
         FileChooser ch = new FileChooser();
         ch.setTitle("Save Design");
@@ -322,9 +318,10 @@ public class RoomDesigner2D extends BorderPane {
             }
             showAlert("Design saved.");
         } catch (IOException ex) {
-            showAlert("Save failed: "+ex.getMessage());
+            showAlert("Save failed: " + ex.getMessage());
         }
     }
+
     private void loadDesign() {
         FileChooser ch = new FileChooser();
         ch.setTitle("Open Design");
@@ -344,7 +341,7 @@ public class RoomDesigner2D extends BorderPane {
             currentRoomDesign.setRightWallColor(Color.web(room[5]));
 
             List<FurnitureItem> list = new ArrayList<>();
-            for (String ln; (ln = br.readLine()) != null;) {
+            for (String ln; (ln = br.readLine()) != null; ) {
                 String[] p = ln.split(";");
                 FurnitureItem it = new FurnitureItem(
                         p[0], Integer.parseInt(p[1]), Integer.parseInt(p[2]),
@@ -361,55 +358,59 @@ public class RoomDesigner2D extends BorderPane {
             refreshAll();
             showAlert("Design loaded.");
         } catch (Exception ex) {
-            showAlert("Load failed: "+ex.getMessage());
+            showAlert("Load failed: " + ex.getMessage());
         }
     }
 
-    /* misc helpers -------------------------------------------------------- */
     private String toHex(Color c) {
         return String.format("#%02X%02X%02X",
                 (int)(c.getRed()*255),
                 (int)(c.getGreen()*255),
                 (int)(c.getBlue()*255));
     }
+
     private void showAlert(String msg) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION,msg);
+        Alert a = new Alert(Alert.AlertType.INFORMATION, msg);
         a.initOwner(getScene().getWindow());
         a.showAndWait();
     }
+
     private Button styledButton(String t) {
         Button b = new Button(t);
         b.setMaxWidth(Double.MAX_VALUE);
-        b.setStyle("""
-                -fx-background-color:#3498db;
-                -fx-text-fill:white;
-                -fx-background-radius:6;
-                -fx-font-size:13;""");
+        b.setStyle(
+                "-fx-background-color:#3498db;" +
+                        "-fx-text-fill:white;" +
+                        "-fx-background-radius:6;" +
+                        "-fx-font-size:13;");
         return b;
     }
+
     private void styleCard(Region r) {
         r.setPadding(new Insets(10));
-        r.setStyle("""
-                -fx-background-color:white;
-                -fx-background-radius:6;
-                -fx-border-color:#dcdcdc;
-                -fx-border-radius:6;""");
+        r.setStyle(
+                "-fx-background-color:white;" +
+                        "-fx-background-radius:6;" +
+                        "-fx-border-color:#dcdcdc;" +
+                        "-fx-border-radius:6;");
     }
+
     private TitledPane titled(String t, Region content) {
         TitledPane tp = new TitledPane(t, content);
         tp.setExpanded(false);
         tp.setAnimated(true);
-        tp.setStyle("""
-                -fx-font-size:14;
-                -fx-font-weight:bold;
-                -fx-text-fill:black;
-                -fx-background-color:#2980b9;""");
-        content.setStyle("""
-                -fx-background-color:#ecf0f1;
-                -fx-padding:8;
-                -fx-background-radius:6;""");
+        tp.setStyle(
+                "-fx-font-size:14;" +
+                        "-fx-font-weight:bold;" +
+                        "-fx-text-fill:black;" +
+                        "-fx-background-color:#2980b9;");
+        content.setStyle(
+                "-fx-background-color:#ecf0f1;" +
+                        "-fx-padding:8;" +
+                        "-fx-background-radius:6;");
         return tp;
     }
+
     private void refreshAll() {
         canvas.draw();
         updateColourPreview();
@@ -430,10 +431,15 @@ public class RoomDesigner2D extends BorderPane {
             roomDesign = rd;
             draw();
 
-            setOnMousePressed (this::onMousePressed);
-            setOnMouseDragged (this::onMouseDragged);
-            setOnMouseReleased(e -> { if (selectedItem!=null) lastSelectedItem = selectedItem; });
-            setOnMouseClicked (this::onMouseClicked);
+            setOnMousePressed(this::onMousePressed);
+            setOnMouseDragged(this::onMouseDragged);
+            setOnMouseReleased(e -> {
+                if (selectedItem != null) lastSelectedItem = selectedItem;
+                draw();
+                // immediate 3D update after drag
+                refreshAll();
+            });
+            setOnMouseClicked(this::onMouseClicked);
         }
 
         void setRoom(RoomDesign rd) {
@@ -442,99 +448,107 @@ public class RoomDesigner2D extends BorderPane {
             setHeight(rd.getRoomHeight());
         }
 
-        /* mouse ----------------------------------------------------------- */
         private void onMouseClicked(MouseEvent e) {
-            if (e.getButton()==MouseButton.SECONDARY && selectedItem!=null) {
+            if (e.getButton() == MouseButton.SECONDARY && selectedItem != null) {
                 ContextMenu m = new ContextMenu();
                 MenuItem del = new MenuItem("Delete");
                 del.setOnAction(ev -> {
                     roomDesign.removeFurniture(selectedItem);
-                    selectedItem=null;
+                    selectedItem = null;
                     draw();
+                    refreshAll();
                 });
                 m.getItems().add(del);
-                m.show(this,e.getScreenX(),e.getScreenY());
+                m.show(this, e.getScreenX(), e.getScreenY());
             }
         }
+
         private void onMousePressed(MouseEvent e) {
-            double x=e.getX(), y=e.getY();
-            selectedItem=null;
-            for (FurnitureItem it: roomDesign.getFurniture()) {
-                if (x>=it.getX() && x<=it.getX()+it.getWidth() &&
-                        y>=it.getY() && y<=it.getY()+it.getHeight()) {
-                    selectedItem=it;
-                    offsetX=x-it.getX();
-                    offsetY=y-it.getY();
+            double x = e.getX(), y = e.getY();
+            selectedItem = null;
+            for (FurnitureItem it : roomDesign.getFurniture()) {
+                if (x >= it.getX() && x <= it.getX()+it.getWidth() &&
+                        y >= it.getY() && y <= it.getY()+it.getHeight()) {
+                    selectedItem = it;
+                    offsetX = x - it.getX();
+                    offsetY = y - it.getY();
                     break;
                 }
             }
             draw();
         }
+
         private void onMouseDragged(MouseEvent e) {
-            if (selectedItem==null) return;
-            double nx=e.getX()-offsetX, ny=e.getY()-offsetY;
-            nx = clamp(nx,0,roomDesign.getRoomWidth() -selectedItem.getWidth ());
-            ny = clamp(ny,0,roomDesign.getRoomHeight()-selectedItem.getHeight());
-            selectedItem.setX((int)nx);
-            selectedItem.setY((int)ny);
+            if (selectedItem == null) return;
+            double nx = e.getX() - offsetX;
+            double ny = e.getY() - offsetY;
+            nx = clamp(nx, 0, roomDesign.getRoomWidth() - selectedItem.getWidth());
+            ny = clamp(ny, 0, roomDesign.getRoomHeight() - selectedItem.getHeight());
+            selectedItem.setX((int) nx);
+            selectedItem.setY((int) ny);
             draw();
         }
 
-        /* public helpers -------------------------------------------------- */
         boolean deleteSelected() {
-            if (lastSelectedItem==null) return false;
+            if (lastSelectedItem == null) return false;
             roomDesign.removeFurniture(lastSelectedItem);
-            lastSelectedItem=null;
+            lastSelectedItem = null;
             draw();
             return true;
         }
+
         void adjustSize(boolean inc) {
-            FurnitureItem it = (selectedItem!=null)?selectedItem:lastSelectedItem;
-            if (it==null) return;
-            double f  = inc?1.1:0.9;
-            double cx = it.getX()+it.getWidth()/2.0;
-            double cy = it.getY()+it.getHeight()/2.0;
-            int nw=(int)(it.getWidth()*f), nh=(int)(it.getHeight()*f);
-            it.setX((int)(cx-nw/2.0)); it.setY((int)(cy-nh/2.0));
-            it.setWidth(nw); it.setHeight(nh);
-            draw();
-        }
-        void rotateSelected(double a) {
-            FurnitureItem it = (selectedItem!=null)?selectedItem:lastSelectedItem;
-            if (it==null) return;
-            it.setRotation((it.getRotation()+a)%360);
+            FurnitureItem it = (selectedItem != null) ? selectedItem : lastSelectedItem;
+            if (it == null) return;
+            double f = inc ? 1.1 : 0.9;
+            double cx = it.getX() + it.getWidth()/2.0;
+            double cy = it.getY() + it.getHeight()/2.0;
+            int nw = (int)(it.getWidth()*f), nh = (int)(it.getHeight()*f);
+            it.setX((int)(cx - nw/2.0));
+            it.setY((int)(cy - nh/2.0));
+            it.setWidth(nw);
+            it.setHeight(nh);
             draw();
         }
 
-        /* drawing --------------------------------------------------------- */
+        void rotateSelected(double a) {
+            FurnitureItem it = (selectedItem != null) ? selectedItem : lastSelectedItem;
+            if (it == null) return;
+            it.setRotation((it.getRotation() + a) % 360);
+            draw();
+        }
+
         void draw() {
             GraphicsContext gc = getGraphicsContext2D();
-            double rw=roomDesign.getRoomWidth(), rh=roomDesign.getRoomHeight();
+            double rw = roomDesign.getRoomWidth(), rh = roomDesign.getRoomHeight();
 
             gc.setFill(roomDesign.getRoomColor());
-            gc.fillRect(0,0,rw,rh);
+            gc.fillRect(0, 0, rw, rh);
             gc.setStroke(Color.BLACK);
-            gc.strokeRect(0,0,rw,rh);
+            gc.strokeRect(0, 0, rw, rh);
 
-            double t=10;
-            gc.setFill(roomDesign.getBackWallColor());  gc.fillRect(0,0,rw,t);
-            gc.setFill(roomDesign.getLeftWallColor());  gc.fillRect(0,0,t,rh);
-            gc.setFill(roomDesign.getRightWallColor()); gc.fillRect(rw-t,0,t,rh);
+            double t = 10;
+            gc.setFill(roomDesign.getBackWallColor());
+            gc.fillRect(0, 0, rw, t);
+            gc.setFill(roomDesign.getLeftWallColor());
+            gc.fillRect(0, 0, t, rh);
+            gc.setFill(roomDesign.getRightWallColor());
+            gc.fillRect(rw-t, 0, t, rh);
 
-            for (FurnitureItem it: roomDesign.getFurniture()) {
-                boolean sel = it==selectedItem || it==lastSelectedItem;
+            for (FurnitureItem it : roomDesign.getFurniture()) {
+                boolean sel = (it == selectedItem || it == lastSelectedItem);
                 gc.save();
-                gc.translate(it.getX()+it.getWidth()/2.0,
-                        it.getY()+it.getHeight()/2.0);
+                gc.translate(it.getX() + it.getWidth()/2.0,
+                        it.getY() + it.getHeight()/2.0);
                 gc.rotate(it.getRotation());
-                gc.translate(-it.getWidth()/2.0,-it.getHeight()/2.0);
-                Furniture2DFactory.drawFurniture(gc,it,sel);
+                gc.translate(-it.getWidth()/2.0, -it.getHeight()/2.0);
+                Furniture2DFactory.drawFurniture(gc, it, sel);
                 gc.restore();
             }
         }
 
-        private double clamp(double v,double min,double max){
-            return Math.max(min,Math.min(max,v));
+        private double clamp(double v, double min, double max) {
+            return Math.max(min, Math.min(max, v));
         }
     }
 }
