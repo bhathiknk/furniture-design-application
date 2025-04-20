@@ -16,7 +16,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
@@ -28,23 +27,14 @@ public class RoomRenderer3D extends StackPane {
     private final Group pivotGroup   = new Group(contentGroup);
     private final Group root3D       = new Group(pivotGroup);
 
-    // start front‑facing (no tilt)
-    private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
-
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
+    private OrbitCameraController cameraController;
 
-    private double cameraDistance = 1400;
-    private double anchorX, anchorY;
-    private double anchorAngleX, anchorAngleY;
     private boolean isLightMode = true;
     private boolean isAutoRotating = false;
     private Timeline autoRotateTimeline;
 
-    private static final double FIT_W     = 700;
-    private static final double FIT_D     = 500;
-    private static final double MIN_DIST  = 500;
-    private static final double MAX_DIST  = 5000;
+    private static final double FIT_W = 700, FIT_D = 500;
 
     public RoomRenderer3D(DesignManager designManager) {
         this.designManager = designManager;
@@ -52,8 +42,6 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void init3D() {
-        pivotGroup.getTransforms().addAll(rotateX, rotateY);
-
         SubScene subScene = new SubScene(root3D, 0, 0, true, SceneAntialiasing.BALANCED);
         subScene.widthProperty().bind(widthProperty());
         subScene.heightProperty().bind(heightProperty());
@@ -65,9 +53,12 @@ public class RoomRenderer3D extends StackPane {
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
 
-        setOnMousePressed(this::onMousePressed);
-        setOnMouseDragged(this::onMouseDragged);
-        addEventHandler(ScrollEvent.SCROLL, this::onScroll);
+        cameraController = new OrbitCameraController(camera);
+
+        setOnMousePressed(e -> cameraController.onMousePressed(e.getSceneX(), e.getSceneY()));
+        setOnMouseDragged(e -> cameraController.onMouseDragged(e.getSceneX(), e.getSceneY()));
+        setOnMouseReleased(e -> cameraController.onMouseReleased());
+        addEventHandler(ScrollEvent.SCROLL, e -> cameraController.zoom(e.getDeltaY()));
 
         widthProperty().addListener((o, __, ___) -> rebuild());
         heightProperty().addListener((o, __, ___) -> rebuild());
@@ -87,33 +78,18 @@ public class RoomRenderer3D extends StackPane {
             contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
-        // scale to fit
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
         contentGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
 
-        // center origin
         Bounds b = contentGroup.getBoundsInParent();
         double cX = (b.getMinX() + b.getMaxX()) / 2.0;
         double cY = (b.getMinY() + b.getMaxY()) / 2.0;
         double cZ = (b.getMinZ() + b.getMaxZ()) / 2.0;
         contentGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
 
-        updateCameraDistance(b);
-        updateCameraPosition();
         setupLighting();
-    }
-
-    private void updateCameraDistance(Bounds bounds) {
-        double maxDim = Math.max(bounds.getWidth(),
-                Math.max(bounds.getHeight(), bounds.getDepth()));
-        cameraDistance = maxDim * 1.8;
-    }
-
-    private void updateCameraPosition() {
-        camera.setTranslateZ(-cameraDistance);
-        camera.setTranslateY(-100);
     }
 
     private void setupLighting() {
@@ -137,83 +113,12 @@ public class RoomRenderer3D extends StackPane {
         }
     }
 
-    private void onMousePressed(MouseEvent e) {
-        anchorX = e.getSceneX();
-        anchorY = e.getSceneY();
-        anchorAngleX = rotateX.getAngle();
-        anchorAngleY = rotateY.getAngle();
-    }
-
-    private void onMouseDragged(MouseEvent e) {
-        double dx = e.getSceneX() - anchorX;
-        double dy = e.getSceneY() - anchorY;
-        rotateY.setAngle(anchorAngleY + dx * 0.4);
-        rotateX.setAngle(clamp(anchorAngleX - dy * 0.4, -85, 85));
-    }
-
-    private void onScroll(ScrollEvent e) {
-        double delta = e.getDeltaY();
-        double target = clamp(cameraDistance - delta, MIN_DIST, MAX_DIST);
-        Timeline zoom = new Timeline(new KeyFrame(
-                Duration.millis(200),
-                new KeyValue(camera.translateZProperty(), -target, Interpolator.EASE_BOTH)
-        ));
-        cameraDistance = target;
-        zoom.play();
-    }
-
-    private static double clamp(double val, double min, double max) {
-        return Math.max(min, Math.min(max, val));
-    }
-
-    /** smoothly reset to front‑facing, centered, full‑fit view */
-    private void smoothReset() {
-        rebuild();  // recalc cameraDistance
-        Timeline t = new Timeline(
-                new KeyFrame(Duration.ZERO,
-                        new KeyValue(rotateX.angleProperty(), rotateX.getAngle()),
-                        new KeyValue(rotateY.angleProperty(), rotateY.getAngle()),
-                        new KeyValue(camera.translateZProperty(), camera.getTranslateZ())
-                ),
-                new KeyFrame(Duration.seconds(1),
-                        new KeyValue(rotateX.angleProperty(), 0, Interpolator.EASE_BOTH),
-                        new KeyValue(rotateY.angleProperty(), 0, Interpolator.EASE_BOTH),
-                        new KeyValue(camera.translateZProperty(), -cameraDistance, Interpolator.EASE_BOTH)
-                )
-        );
-        t.play();
-    }
-
-    /** smoothly animate zoom‑to‑fit */
-    private void smoothZoomFit() {
-        rebuild();
-        double targetZ = -cameraDistance;
-        Timeline t = new Timeline(
-                new KeyFrame(Duration.ZERO,
-                        new KeyValue(camera.translateZProperty(), camera.getTranslateZ())
-                ),
-                new KeyFrame(Duration.seconds(1),
-                        new KeyValue(camera.translateZProperty(), targetZ, Interpolator.EASE_BOTH)
-                )
-        );
-        t.play();
-    }
-
-    /** call to re‑center & reset angles immediately */
-    public void updateScene() {
-        rotateX.setAngle(0);
-        rotateY.setAngle(0);
-        rebuild();
-    }
-
     private void addOverlayButtons() {
         Button btnReset      = overlayButton("🔄 Reset View");
-        Button btnZoomFit    = overlayButton("🔍 Zoom to Fit");
         Button btnLight      = overlayButton("💡 Toggle Light");
         Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
 
-        btnReset.setOnAction(e -> smoothReset());
-        btnZoomFit.setOnAction(e -> smoothZoomFit());
+        btnReset.setOnAction(e -> cameraController.resetView());
         btnLight.setOnAction(e -> {
             isLightMode = !isLightMode;
             setupLighting();
@@ -224,7 +129,7 @@ public class RoomRenderer3D extends StackPane {
             else stopAutoRotate();
         });
 
-        VBox box = new VBox(8, btnReset, btnZoomFit, btnLight, btnAutoRotate);
+        VBox box = new VBox(8, btnReset, btnLight, btnAutoRotate);
         box.setStyle("-fx-padding: 10;");
         box.setTranslateX(10);
         box.setTranslateY(10);
@@ -233,9 +138,13 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void startAutoRotate() {
-        autoRotateTimeline = new Timeline(new KeyFrame(
-                Duration.millis(40), e -> rotateY.setAngle(rotateY.getAngle() + 0.5)
-        ));
+        autoRotateTimeline = new Timeline(new KeyFrame(Duration.millis(16), e -> {
+            double simulatedX = getWidth() / 2.0;
+            double simulatedY = getHeight() / 2.0;
+            cameraController.onMousePressed(simulatedX, simulatedY);
+            cameraController.onMouseDragged(simulatedX + 1, simulatedY);
+            cameraController.onMouseReleased();
+        }));
         autoRotateTimeline.setCycleCount(Animation.INDEFINITE);
         autoRotateTimeline.play();
     }
@@ -256,6 +165,11 @@ public class RoomRenderer3D extends StackPane {
             -fx-padding: 6 12;
         """);
         return b;
+    }
+
+    public void updateScene() {
+        cameraController.resetView();
+        rebuild();
     }
 
     private void showUserHint(String message) {
