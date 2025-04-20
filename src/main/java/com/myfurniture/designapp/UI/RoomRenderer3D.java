@@ -10,12 +10,12 @@ import javafx.geometry.Bounds;
 import javafx.scene.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
@@ -23,9 +23,9 @@ import javafx.util.Duration;
 public class RoomRenderer3D extends StackPane {
 
     private final DesignManager designManager;
-    private final Group contentGroup = new Group();
-    private final Group pivotGroup   = new Group(contentGroup);
-    private final Group root3D       = new Group(pivotGroup);
+    private final Group roomGroup = new Group();
+    private final Group pivotGroup = new Group(roomGroup);
+    private final Group root3D = new Group(pivotGroup);
 
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
     private OrbitCameraController cameraController;
@@ -53,7 +53,7 @@ public class RoomRenderer3D extends StackPane {
         camera.setNearClip(0.1);
         camera.setFarClip(10000);
 
-        cameraController = new OrbitCameraController(camera);
+        cameraController = new OrbitCameraController(camera, pivotGroup);
 
         setOnMousePressed(e -> cameraController.onMousePressed(e.getSceneX(), e.getSceneY()));
         setOnMouseDragged(e -> cameraController.onMouseDragged(e.getSceneX(), e.getSceneY()));
@@ -69,25 +69,25 @@ public class RoomRenderer3D extends StackPane {
     }
 
     private void rebuild() {
-        contentGroup.getChildren().clear();
+        roomGroup.getChildren().clear();
         RoomDesign room = designManager.getCurrentDesign();
         if (room == null) return;
 
-        contentGroup.getChildren().add(BoothRoomFactory.createBooth(room));
+        roomGroup.getChildren().add(BoothRoomFactory.createBooth(room));
         for (FurnitureItem item : room.getFurniture()) {
-            contentGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
+            roomGroup.getChildren().add(Furniture3DFactory.createFurniture3D(item));
         }
 
         double sX = FIT_W / room.getRoomWidth();
         double sZ = FIT_D / room.getRoomHeight();
         double scaleFactor = Math.min(sX, sZ);
-        contentGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
+        roomGroup.getTransforms().setAll(new Scale(scaleFactor, -scaleFactor, -scaleFactor));
 
-        Bounds b = contentGroup.getBoundsInParent();
+        Bounds b = roomGroup.getBoundsInParent();
         double cX = (b.getMinX() + b.getMaxX()) / 2.0;
         double cY = (b.getMinY() + b.getMaxY()) / 2.0;
         double cZ = (b.getMinZ() + b.getMaxZ()) / 2.0;
-        contentGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
+        roomGroup.getTransforms().add(new Translate(-cX, -cY, -cZ));
 
         setupLighting();
     }
@@ -95,27 +95,27 @@ public class RoomRenderer3D extends StackPane {
     private void setupLighting() {
         root3D.getChildren().removeIf(n -> n instanceof LightBase);
         if (isLightMode) {
-            AmbientLight amb = new AmbientLight(Color.rgb(160,160,160,0.25));
-            PointLight key = new PointLight(Color.rgb(255,244,230));
+            AmbientLight amb = new AmbientLight(Color.rgb(160, 160, 160, 0.25));
+            PointLight key = new PointLight(Color.rgb(255, 244, 230));
             key.setTranslateX(-400); key.setTranslateY(-250); key.setTranslateZ(-300);
-            PointLight rim = new PointLight(Color.rgb(200,200,255,0.4));
+            PointLight rim = new PointLight(Color.rgb(200, 200, 255, 0.4));
             rim.setTranslateX(300); rim.setTranslateY(-100); rim.setTranslateZ(300);
-            PointLight floor = new PointLight(Color.rgb(180,180,180,0.2));
+            PointLight floor = new PointLight(Color.rgb(180, 180, 180, 0.2));
             floor.setTranslateY(50);
-            PointLight top = new PointLight(Color.rgb(255,255,240,0.15));
+            PointLight top = new PointLight(Color.rgb(255, 255, 240, 0.15));
             top.setTranslateY(-500);
             root3D.getChildren().addAll(amb, key, rim, floor, top);
         } else {
-            AmbientLight amb = new AmbientLight(Color.rgb(40,40,40,0.2));
-            PointLight moon = new PointLight(Color.rgb(120,120,140));
+            AmbientLight amb = new AmbientLight(Color.rgb(40, 40, 40, 0.2));
+            PointLight moon = new PointLight(Color.rgb(120, 120, 140));
             moon.setTranslateX(-200); moon.setTranslateY(-300); moon.setTranslateZ(-250);
             root3D.getChildren().addAll(amb, moon);
         }
     }
 
     private void addOverlayButtons() {
-        Button btnReset      = overlayButton("🔄 Reset View");
-        Button btnLight      = overlayButton("💡 Toggle Light");
+        Button btnReset = overlayButton("🔄 Reset View");
+        Button btnLight = overlayButton("💡 Toggle Light");
         Button btnAutoRotate = overlayButton("🎥 Toggle Auto-Rotate");
 
         btnReset.setOnAction(e -> cameraController.resetView());
@@ -183,9 +183,7 @@ public class RoomRenderer3D extends StackPane {
         hint.setFont(Font.font(13));
         getChildren().add(hint);
         StackPane.setAlignment(hint, javafx.geometry.Pos.BOTTOM_CENTER);
-        Timeline fade = new Timeline(
-                new KeyFrame(Duration.seconds(4), new KeyValue(hint.opacityProperty(), 0))
-        );
+        Timeline fade = new Timeline(new KeyFrame(Duration.seconds(4), new KeyValue(hint.opacityProperty(), 0)));
         fade.setOnFinished(e -> getChildren().remove(hint));
         fade.play();
     }
